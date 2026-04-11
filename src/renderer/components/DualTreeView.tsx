@@ -9,6 +9,8 @@ interface DualTreeViewProps {
   rightDir: string
   onRefresh: () => void
   selectedFilePath?: string | null
+  expandedPaths: Set<string>
+  setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
 }
 
 interface TreeRow {
@@ -23,8 +25,9 @@ interface TreeRow {
   folderStatus?: 'modified' | 'left-only' | 'right-only' | 'same'
 }
 
-const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, leftDir, rightDir, onRefresh, selectedFilePath }) => {
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['']))
+const DualTreeView: React.FC<DualTreeViewProps> = ({ 
+  results, onFileSelect, leftDir, rightDir, onRefresh, selectedFilePath, expandedPaths, setExpandedPaths 
+}) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const scrollRefLeft = useRef<HTMLDivElement>(null)
   const scrollRefRight = useRef<HTMLDivElement>(null)
@@ -88,9 +91,15 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
     sortedPaths.forEach(path => {
       const parts = path.split('/')
       const depth = parts.length - 1
-      const parentPath = parts.slice(0, -1).join('/')
       
-      if (depth > 0 && !expandedPaths.has(parentPath)) return
+      // Check if all ancestor folders are expanded
+      if (depth > 0) {
+        let currentAncestor = ''
+        for (let i = 0; i < parts.length - 1; i++) {
+          currentAncestor = currentAncestor ? `${currentAncestor}/${parts[i]}` : parts[i]
+          if (!expandedPaths.has(currentAncestor)) return
+        }
+      }
 
       const fileResult = normalizedResults.find(r => r.normalizedPath === path)
       const isFile = !!fileResult

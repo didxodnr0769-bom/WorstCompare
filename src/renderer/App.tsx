@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<AppState>('setup')
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [excludes, setExcludes] = useState<string>('node_modules, .git, dist, build, .DS_Store')
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['']))
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('compare-history')
@@ -90,6 +91,8 @@ const App: React.FC = () => {
                 rightDir={rightDir}
                 onRefresh={() => handleCompare()}
                 selectedFilePath={selectedFile}
+                expandedPaths={expandedPaths}
+                setExpandedPaths={setExpandedPaths}
               />
             )}
             {view === 'comparing' && <div className="loading-overlay">Comparing...</div>}
