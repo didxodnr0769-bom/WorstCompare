@@ -138,6 +138,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           border-radius: 4px;
           color: var(--input-text);
           font-size: 0.85rem;
+          font-family: inherit;
         }
         .exclude-input {
           background: var(--input-bg);
@@ -146,7 +147,9 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           border-radius: 4px;
           color: var(--input-text);
           font-size: 0.85rem;
+          font-family: inherit;
           width: 100%;
+          display: block;
         }
         .action-buttons {
           display: flex;
