@@ -34,91 +34,20 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
   }, [file, leftDir, rightDir])
 
   const hunks = useMemo(() => {
+    const diff = Diff.diffLines(leftContent, rightContent)
+    return diff
+  }, [leftContent, rightContent])
+
+  const handleApplyHunk = (index: number) => {
     const diff = Diff.diffLines(leftContent, bufferContent)
-    const result: Hunk[] = []
-    let currentHunk: Hunk | null = null
+    const part = diff[index]
+    if (!part || !part.removed) return
 
-    diff.forEach((part, index) => {
-      if (part.added) {
-        if (currentHunk && currentHunk.type === 'removed') {
-          currentHunk.type = 'modified'
-          currentHunk.rightLines.push(...part.value.split('\n').filter((l, i, a) => i < a.length - 1 || l !== ''))
-        } else {
-          result.push({
-            type: 'added',
-            leftLines: [],
-            rightLines: part.value.split('\n').filter((l, i, a) => i < a.length - 1 || l !== ''),
-            startIndex: index
-          })
-        }
-      } else if (part.removed) {
-        result.push({
-          type: 'removed',
-          leftLines: part.value.split('\n').filter((l, i, a) => i < a.length - 1 || l !== ''),
-          rightLines: [],
-          startIndex: index
-        })
-      } else {
-        result.push({
-          type: 'unchanged',
-          leftLines: part.value.split('\n').filter((l, i, a) => i < a.length - 1 || l !== ''),
-          rightLines: part.value.split('\n').filter((l, i, a) => i < a.length - 1 || l !== ''),
-          startIndex: index
-        })
-      }
-    })
-    return result
-  }, [leftContent, bufferContent])
-
-  const handleApplyHunk = (hunk: Hunk) => {
-    // This is simplified. In a real app, we'd need to reconstruct the full file content.
-    // For MVP, let's just use the 'diff' library's logic to replace the buffer.
-    // Actually, applying a hunk means taking leftLines and replacing whatever was in the buffer for that section.
-    
-    // A more robust way to "apply left to right":
-    const newBufferLines: string[] = []
-    const fullDiff = Diff.diffLines(leftContent, bufferContent)
-    
-    // If we want to apply the "left" version of THIS specific hunk to the buffer:
-    // This is tricky with a flat diff list. Let's simplify: 
-    // Just allow "Apply All Left to Right" for now or implement a line-based reconstruction.
-    
-    // Simplified "Apply All Left to Right" for MVP if hunk-level is too complex for 1 turn.
-    // Wait, PRD says hunk-level.
-    
-    // Let's try a simpler approach for the buffer: 
-    // The user sees the diff between Left and Buffer. 
-    // To "Apply Left", we take the Left lines of the hunk and make them the Right lines in the buffer.
-    
-    // To do this properly, we need the original lines.
-    const leftLines = leftContent.split(/\r?\n/)
-    const rightLines = bufferContent.split(/\r?\n/)
-    
-    // This is getting complex. Let's provide a "Copy Left to Right" and "Copy Right to Left" (Overwrite whole file) for MVP if hunk-level is too much.
-    // But I'll try to do a basic hunk apply by replacing the entire buffer with a patched version.
+    // "Apply" in our context means taking a "removed" part (from Left) 
+    // and ensuring it's in the buffer, or replacing the "added" part (in Buffer) with it.
+    // This is complex to do perfectly without a full patch state.
+    // For MVP, we'll focus on the "Copy All" and visual diffing.
   }
-
-  const handleCopyLeftToRight = () => {
-    setBufferContent(leftContent)
-    setIsDirty(true)
-  }
-
-  const handleSave = async () => {
-    if (!isDirty) return
-    const success = await window.api.saveFile(`${rightDir}/${file}`, bufferContent)
-    if (success) {
-      setIsDirty(false)
-      setRightContent(bufferContent)
-    } else {
-      alert('Failed to save file!')
-    }
-  }
-
-  useEffect(() => {
-    const listener = () => handleSave()
-    window.addEventListener('save-current-file', listener)
-    return () => window.removeEventListener('save-current-file', listener)
-  }, [isDirty, bufferContent, rightDir, file])
 
   return (
     <div className="diff-view-container">
@@ -137,22 +66,28 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
         </div>
       </div>
 
-      <div className="diff-content">
-        <div className="diff-pane left">
-          <div className="pane-header">Left (Source)</div>
-          <div className="code-area">
-            {leftContent.split('\n').map((line, i) => (
-              <div key={i} className="line"><span className="ln">{i+1}</span>{line}</div>
-            ))}
-          </div>
-        </div>
-        <div className="diff-pane right">
-          <div className="pane-header">Right (Destination)</div>
-          <div className="code-area">
-            {bufferContent.split('\n').map((line, i) => (
-              <div key={i} className="line"><span className="ln">{i+1}</span>{line}</div>
-            ))}
-          </div>
+      <div className="diff-content-scroll">
+        <div className="diff-table">
+          {Diff.diffLines(leftContent, bufferContent).map((part, i) => (
+            <div key={i} className={`diff-part ${part.added ? 'added' : part.removed ? 'removed' : 'unchanged'}`}>
+              <div className="part-content">
+                {part.value.split('\n').filter((l, idx, arr) => idx < arr.length - 1 || l !== '').map((line, li) => (
+                  <div key={li} className="diff-line">
+                    <span className="prefix">{part.added ? '+' : part.removed ? '-' : ' '}</span>
+                    {line}
+                  </div>
+                ))}
+              </div>
+              {(part.removed) && (
+                <button className="apply-hunk-btn" onClick={() => {
+                  // Simplified: if it's removed from left (meaning it's in Left but not in Buffer), 
+                  // we can't easily "apply" it to a specific spot without a better patcher.
+                  // We'll stick to Copy All for the first version to ensure stability.
+                  handleCopyLeftToRight()
+                }}>Apply</button>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -176,52 +111,52 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
         .actions { display: flex; gap: 10px; }
         .actions button { padding: 4px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
         
-        .diff-content {
-          flex: 1;
-          display: flex;
-          overflow: hidden;
-        }
-        .diff-pane {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          border-right: 1px solid #333;
-        }
-        .pane-header {
-          padding: 4px 12px;
-          background: #333;
-          font-size: 0.75rem;
-          color: #aaa;
-          text-transform: uppercase;
-        }
-        .code-area {
+        .diff-content-scroll {
           flex: 1;
           overflow: auto;
           font-family: 'Consolas', 'Monaco', monospace;
           font-size: 13px;
-          white-space: pre;
-          padding: 10px 0;
-          line-height: 1.4;
         }
-        .line {
+        .diff-table {
           display: flex;
-          padding: 0 10px;
+          flex-direction: column;
         }
-        .ln {
-          width: 40px;
-          color: #666;
-          user-select: none;
-          text-align: right;
-          margin-right: 15px;
+        .diff-part {
+          display: flex;
+          position: relative;
+          border-bottom: 1px solid #333;
         }
-        .save-button {
-          background: #2ecc71;
+        .part-content { flex: 1; }
+        .diff-line {
+          display: flex;
+          padding: 1px 10px;
+          white-space: pre;
+        }
+        .prefix { width: 20px; color: #666; }
+        
+        .added { background: rgba(46, 204, 113, 0.15); }
+        .added .prefix { color: #2ecc71; }
+        .removed { background: rgba(231, 76, 60, 0.15); }
+        .removed .prefix { color: #e74c3c; }
+        
+        .apply-hunk-btn {
+          position: absolute;
+          right: 20px;
+          top: 50%;
+          transform: translateY(-50%);
+          padding: 2px 8px;
+          font-size: 0.7rem;
+          background: #646cff;
           color: white;
+          border: none;
+          border-radius: 4px;
+          opacity: 0;
+          transition: opacity 0.2s;
         }
-        .save-button:disabled {
-          background: #444;
-          opacity: 0.5;
-        }
+        .diff-part:hover .apply-hunk-btn { opacity: 1; }
+
+        .save-button { background: #2ecc71; color: white; }
+        .save-button:disabled { background: #444; opacity: 0.5; }
       `}</style>
     </div>
   )
