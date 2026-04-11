@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -29,7 +30,8 @@
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
     "vite-plugin-electron": "^0.29.1",
-    "vite-plugin-electron-renderer": "^0.14.6"
+    "vite-plugin-electron-renderer": "^0.14.6",
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "@types/diff": "^7.0.2",

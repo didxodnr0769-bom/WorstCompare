@@ -58,17 +58,6 @@ const App: React.FC = () => {
     setSelectedFile(null)
   }
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault()
-        window.dispatchEvent(new CustomEvent('save-current-file'))
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
   return (
     <div className="app-container">
       <main className="app-main">
