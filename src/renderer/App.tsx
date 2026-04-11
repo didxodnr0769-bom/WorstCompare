@@ -46,13 +46,6 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <h1>WorstCompare</h1>
-        {view === 'diff' && (
-          <button onClick={handleBack} className="back-button">Back to Tree</button>
-        )}
-      </header>
-
       <main className="app-main">
         {view !== 'diff' ? (
           <div className="workspace">
@@ -75,7 +68,8 @@ const App: React.FC = () => {
           <DiffView 
             file={selectedFile!} 
             leftDir={leftDir} 
-            rightDir={rightDir} 
+            rightDir={rightDir}
+            onBack={handleBack}
           />
         )}
       </main>

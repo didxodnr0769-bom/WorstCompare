@@ -122,7 +122,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
               className={`tree-row ${row.hasLeft ? '' : 'missing'} ${row.leftStatus || ''}`}
               style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
               onClick={() => !row.isFile && toggleExpand(row.path)}
-              onDoubleClick={() => row.isFile && row.hasLeft && row.hasRight && onFileSelect(row.path)}
+              onDoubleClick={() => row.isFile && onFileSelect(row.path)}
             >
               {renderIcon(row, 'left')}
               <span className="row-name">{row.hasLeft ? row.name : ''}</span>
@@ -137,7 +137,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
               className={`tree-row ${row.hasRight ? '' : 'missing'} ${row.rightStatus || ''}`}
               style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
               onClick={() => !row.isFile && toggleExpand(row.path)}
-              onDoubleClick={() => row.isFile && row.hasLeft && row.hasRight && onFileSelect(row.path)}
+              onDoubleClick={() => row.isFile && onFileSelect(row.path)}
             >
               {renderIcon(row, 'right')}
               <span className="row-name">{row.hasRight ? row.name : ''}</span>
