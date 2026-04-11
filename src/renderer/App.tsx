@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import FolderSelector from './components/FolderSelector'
-import TreeView from './components/TreeView'
+import DualTreeView from './components/DualTreeView'
 import DiffView from './components/DiffView'
 import { ComparisonResult } from './electron.d'
 import './App.css'
@@ -37,7 +37,6 @@ const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
-        // Save logic will be handled within DiffView or via a ref/context
         window.dispatchEvent(new CustomEvent('save-current-file'))
       }
     }
@@ -65,7 +64,7 @@ const App: React.FC = () => {
               onCompare={handleCompare}
             />
             {results.length > 0 && (
-              <TreeView 
+              <DualTreeView 
                 results={results} 
                 onFileSelect={handleFileSelect} 
               />

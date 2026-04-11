@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import * as Diff from 'diff'
 import { ArrowLeftRight, Save } from 'lucide-react'
 
@@ -14,6 +14,9 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
   const [bufferContent, setBufferContent] = useState<string>('')
   const [isDirty, setIsDirty] = useState(false)
   const [loading, setLoading] = useState(true)
+  
+  const scrollRefLeft = useRef<HTMLDivElement>(null)
+  const scrollRefRight = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const loadFiles = async () => {
@@ -57,13 +60,39 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
     return () => window.removeEventListener('save-current-file', listener)
   }, [isDirty, bufferContent, rightDir, file])
 
-  const diffParts = useMemo(() => {
-    return Diff.diffLines(leftContent, bufferContent)
+  const syncScroll = (e: React.UIEvent<HTMLDivElement>, target: React.RefObject<HTMLDivElement>) => {
+    if (target.current) {
+      target.current.scrollTop = e.currentTarget.scrollTop
+      target.current.scrollLeft = e.currentTarget.scrollLeft
+    }
+  }
+
+  const diffLines = useMemo(() => {
+    const diff = Diff.diffLines(leftContent, bufferContent)
+    const leftRes: { type: string, value: string }[] = []
+    const rightRes: { type: string, value: string }[] = []
+
+    diff.forEach(part => {
+      if (part.added) {
+        rightRes.push({ type: 'added', value: part.value })
+        // Pad left side
+        const lineCount = part.value.split('\n').length - 1 || 1
+        leftRes.push({ type: 'padding', value: '\n'.repeat(lineCount) })
+      } else if (part.removed) {
+        leftRes.push({ type: 'removed', value: part.value })
+        // Pad right side
+        const lineCount = part.value.split('\n').length - 1 || 1
+        rightRes.push({ type: 'padding', value: '\n'.repeat(lineCount) })
+      } else {
+        leftRes.push({ type: 'unchanged', value: part.value })
+        rightRes.push({ type: 'unchanged', value: part.value })
+      }
+    })
+
+    return { leftRes, rightRes }
   }, [leftContent, bufferContent])
 
-  if (loading) {
-    return <div className="loading-state">Loading file content...</div>
-  }
+  if (loading) return <div className="loading-state">Loading...</div>
 
   return (
     <div className="diff-view-container">
@@ -74,109 +103,60 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
         </div>
         <div className="actions">
           <button onClick={handleCopyLeftToRight} title="Copy Left to Right">
-            <ArrowLeftRight size={16} /> Copy All Left to Right
+            <ArrowLeftRight size={16} /> Overwrite Right
           </button>
           <button onClick={handleSave} disabled={!isDirty} className="save-button">
-            <Save size={16} /> Save (Ctrl+S)
+            <Save size={16} /> Save
           </button>
         </div>
       </div>
 
-      <div className="diff-content-scroll">
-        <div className="diff-table">
-          {diffParts.length === 0 && <div className="no-diff">No differences or file is empty.</div>}
-          {diffParts.map((part, i) => (
-            <div key={i} className={`diff-part ${part.added ? 'added' : part.removed ? 'removed' : 'unchanged'}`}>
-              <div className="part-content">
-                {part.value.split('\n').filter((l, idx, arr) => idx < arr.length - 1 || l !== '').map((line, li) => (
-                  <div key={li} className="diff-line">
-                    <span className="prefix">{part.added ? '+' : part.removed ? '-' : ' '}</span>
-                    {line}
-                  </div>
+      <div className="side-by-side-diff">
+        <div className="pane left" ref={scrollRefLeft} onScroll={(e) => syncScroll(e, scrollRefRight)}>
+          <div className="pane-header">LEFT (SOURCE)</div>
+          <div className="code-content">
+            {diffLines.leftRes.map((part, i) => (
+              <div key={i} className={`diff-part ${part.type}`}>
+                {part.value.split('\n').map((line, li) => (
+                  <div key={li} className="diff-line">{line}</div>
                 ))}
               </div>
-              {part.removed && (
-                <button className="apply-hunk-btn" onClick={() => handleCopyLeftToRight()}>
-                  Apply
-                </button>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+        <div className="pane right" ref={scrollRefRight} onScroll={(e) => syncScroll(e, scrollRefLeft)}>
+          <div className="pane-header">RIGHT (DESTINATION)</div>
+          <div className="code-content">
+            {diffLines.rightRes.map((part, i) => (
+              <div key={i} className={`diff-part ${part.type}`}>
+                {part.value.split('\n').map((line, li) => (
+                  <div key={li} className="diff-line">{line}</div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       <style>{`
-        .loading-state, .no-diff {
-          padding: 40px;
-          text-align: center;
-          color: #888;
-          font-style: italic;
-        }
-        .diff-view-container {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          background: #1e1e1e;
-        }
-        .diff-toolbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 16px;
-          background: #252526;
-          border-bottom: 1px solid #333;
-        }
+        .diff-view-container { display: flex; flex-direction: column; height: 100%; background: #1e1e1e; }
+        .diff-toolbar { display: flex; justify-content: space-between; padding: 8px 16px; background: #252526; border-bottom: 1px solid #333; }
         .file-name { font-weight: 600; color: #ccc; }
-        .dirty-indicator { margin-left: 10px; color: #f1c40f; font-size: 0.8rem; }
-        .actions { display: flex; gap: 10px; }
-        .actions button { padding: 4px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+        .dirty-indicator { margin-left: 10px; color: #f1c40f; }
         
-        .diff-content-scroll {
-          flex: 1;
-          overflow: auto;
-          font-family: 'Consolas', 'Monaco', monospace;
-          font-size: 13px;
-        }
-        .diff-table {
-          display: flex;
-          flex-direction: column;
-        }
-        .diff-part {
-          display: flex;
-          position: relative;
-          border-bottom: 1px solid #333;
-        }
-        .part-content { flex: 1; }
-        .diff-line {
-          display: flex;
-          padding: 1px 10px;
-          white-space: pre;
-        }
-        .prefix { width: 20px; color: #666; }
+        .side-by-side-diff { flex: 1; display: flex; overflow: hidden; }
+        .pane { flex: 1; display: flex; flex-direction: column; overflow: auto; border-right: 1px solid #333; }
+        .pane-header { padding: 4px 12px; background: #333; font-size: 0.7rem; color: #888; position: sticky; top: 0; z-index: 10; }
+        .code-content { font-family: monospace; font-size: 13px; white-space: pre; line-height: 1.5; padding-bottom: 50px; }
         
-        .added { background: rgba(46, 204, 113, 0.15); }
-        .added .prefix { color: #2ecc71; }
-        .removed { background: rgba(231, 76, 60, 0.15); }
-        .removed .prefix { color: #e74c3c; }
-        
-        .apply-hunk-btn {
-          position: absolute;
-          right: 20px;
-          top: 5px;
-          padding: 2px 8px;
-          font-size: 0.7rem;
-          background: #646cff;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          opacity: 0;
-          transition: opacity 0.2s;
-          cursor: pointer;
-        }
-        .diff-part:hover .apply-hunk-btn { opacity: 1; }
+        .diff-part.added { background: rgba(46, 204, 113, 0.2); }
+        .diff-part.removed { background: rgba(231, 76, 60, 0.2); }
+        .diff-part.padding { background: rgba(0, 0, 0, 0.1); color: transparent; user-select: none; }
+        .diff-line { padding: 0 12px; min-height: 1.5em; border-bottom: 1px solid rgba(255,255,255,0.03); }
 
         .save-button { background: #2ecc71; color: white; }
         .save-button:disabled { background: #444; opacity: 0.5; }
+        .loading-state { padding: 40px; text-align: center; color: #888; }
       `}</style>
     </div>
   )
