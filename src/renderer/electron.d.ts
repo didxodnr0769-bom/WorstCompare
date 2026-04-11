@@ -9,6 +9,7 @@ export interface IElectronAPI {
   readFile: (filePath: string) => Promise<string | null>
   saveFile: (filePath: string, content: string) => Promise<boolean>
   copyItem: (src: string, dest: string) => Promise<boolean>
+  deleteItem: (target: string) => Promise<boolean>
 }
 
 declare global {

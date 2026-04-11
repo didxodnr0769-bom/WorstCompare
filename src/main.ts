@@ -138,11 +138,9 @@ ipcMain.handle('copy-item', async (_, src: string, dest: string) => {
     const stats = await fs.stat(srcPath)
     if (stats.isDirectory()) {
       await fs.mkdir(path.dirname(destPath), { recursive: true })
-      // Use cp for recursive copy if available (Node 16.7+), otherwise custom recursive copy
       if (typeof fs.cp === 'function') {
         await fs.cp(srcPath, destPath, { recursive: true })
       } else {
-        // Fallback for older Node versions (though Electron usually has recent Node)
         const copyRecursive = async (s: string, d: string) => {
           const sStats = await fs.stat(s)
           if (sStats.isDirectory()) {
@@ -164,6 +162,19 @@ ipcMain.handle('copy-item', async (_, src: string, dest: string) => {
     return true
   } catch (err) {
     console.error('Copy failed:', err)
+    return false
+  }
+})
+
+ipcMain.handle('delete-item', async (_, target: string) => {
+  try {
+    const targetPath = path.normalize(target)
+    if (existsSync(targetPath)) {
+      await fs.rm(targetPath, { recursive: true, force: true })
+    }
+    return true
+  } catch (err) {
+    console.error('Delete failed:', err)
     return false
   }
 })

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { ComparisonResult } from '../electron.d'
-import { File, FileText, ChevronRight, ChevronDown, Minus, Plus, ArrowRight } from 'lucide-react'
+import { File, FileText, ChevronRight, ChevronDown, Minus, Plus, ArrowRight, Trash2 } from 'lucide-react'
 
 interface DualTreeViewProps {
   results: ComparisonResult[]
@@ -116,6 +116,18 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
     else alert('Copy failed!')
   }
 
+  const handleDelete = async (e: React.MouseEvent, row: TreeRow, side: 'left' | 'right') => {
+    e.stopPropagation()
+    const confirmMsg = `Are you sure you want to delete ${row.name} from the ${side} side?`
+    if (!confirm(confirmMsg)) return
+
+    const targetBase = side === 'left' ? leftDir : rightDir
+    const target = `${targetBase}/${row.path}`
+    const success = await window.api.deleteItem(target)
+    if (success) onRefresh()
+    else alert('Delete failed!')
+  }
+
   const rows = generateRows()
 
   const renderRow = (row: TreeRow, side: 'left' | 'right') => {
@@ -142,11 +154,19 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
           ) : null}
         </div>
         <span className="row-name">{exists ? row.name : ''}</span>
-        {side === 'left' && row.hasLeft && row.status !== 'same' && (
-          <button className="row-copy-btn" onClick={(e) => handleCopy(e, row)} title="Copy to Right">
-            <ArrowRight size={12} />
-          </button>
-        )}
+        
+        <div className="row-actions">
+          {side === 'left' && row.hasLeft && row.status !== 'same' && (
+            <button className="row-btn copy" onClick={(e) => handleCopy(e, row)} title="Copy to Right">
+              <ArrowRight size={12} />
+            </button>
+          )}
+          {exists && (
+            <button className="row-btn delete" onClick={(e) => handleDelete(e, row, side)} title="Delete">
+              <Trash2 size={12} />
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -221,18 +241,27 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
         .icon-wrapper { width: 16px; display: flex; align-items: center; justify-content: center; }
         .row-name { color: #ccc; flex: 1; overflow: hidden; text-overflow: ellipsis; }
         
-        .row-copy-btn {
+        .row-actions {
           position: absolute;
           right: 8px;
+          display: flex;
+          gap: 4px;
+          opacity: 0;
+        }
+        .tree-row:hover .row-actions { opacity: 1; }
+
+        .row-btn {
           padding: 2px 4px;
-          background: #646cff;
           color: white;
           border: none;
           border-radius: 3px;
-          opacity: 0;
           cursor: pointer;
+          display: flex;
+          align-items: center;
         }
-        .tree-row:hover .row-copy-btn { opacity: 1; }
+        .row-btn.copy { background: #646cff; }
+        .row-btn.delete { background: #e74c3c; }
+        .row-btn:hover { filter: brightness(1.2); }
 
         .status-modified { color: #f1c40f; }
         .status-left-only { color: #e74c3c; }
