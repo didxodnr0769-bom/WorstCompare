@@ -55,7 +55,7 @@ const App: React.FC = () => {
 
   const handleBack = () => {
     setView('setup')
-    setSelectedFile(null)
+    // Keep selectedFile to maintain focus in the tree view
   }
 
   return (
@@ -85,6 +85,7 @@ const App: React.FC = () => {
                 leftDir={leftDir}
                 rightDir={rightDir}
                 onRefresh={() => handleCompare()}
+                selectedFilePath={selectedFile}
               />
             )}
             {view === 'comparing' && <div className="loading-overlay">Comparing...</div>}

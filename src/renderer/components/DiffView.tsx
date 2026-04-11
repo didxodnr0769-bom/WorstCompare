@@ -176,11 +176,54 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
   const scrollToHunk = useCallback((index: number) => {
     if (index < 0 || index >= diffHunksOnly.length) return
     const hunk = diffHunksOnly[index]
+    
     let visualLineIndex = 0
-    for (const h of hunks) { if (h === hunk) break; visualLineIndex += h.lineCount; }
+    for (const h of hunks) {
+      if (h === hunk) break
+      visualLineIndex += h.lineCount
+    }
+
     const scrollTop = visualLineIndex * 21
-    if (scrollRefLeft.current) scrollRefLeft.current.scrollTo({ top: scrollTop, behavior: 'smooth' })
+    
+    // Force set scrollTop on both textareas to ensure they are in sync
+    if (scrollRefLeft.current) scrollRefLeft.current.scrollTop = scrollTop
+    if (scrollRefRight.current) scrollRefRight.current.scrollTop = scrollTop
+    
+    // Update background scroll through syncScroll or direct assignment
+    if (bgRefLeft.current) bgRefLeft.current.scrollTop = scrollTop
+    if (bgRefRight.current) bgRefRight.current.scrollTop = scrollTop
   }, [hunks, diffHunksOnly])
+
+  const totalLines = useMemo(() => hunks.reduce((acc, h) => acc + h.lineCount, 0), [hunks])
+
+  const renderMinimap = () => {
+    let currentLine = 0
+    return (
+      <div className="diff-minimap">
+        {hunks.map((hunk, i) => {
+          const startLine = currentLine
+          currentLine += hunk.lineCount
+          if (hunk.type === 'unchanged') return null
+          
+          const top = (startLine / totalLines) * 100
+          const height = (hunk.lineCount / totalLines) * 100
+          const diffIdx = diffHunksOnly.indexOf(hunk)
+          
+          return (
+            <div 
+              key={i} 
+              className={`minimap-marker ${hunk.type} ${diffIdx === currentHunkIndex ? 'active' : ''}`}
+              style={{ top: `${top}%`, height: `${Math.max(height, 0.5)}%` }}
+              onClick={() => {
+                setCurrentHunkIndex(diffIdx)
+                scrollToHunk(diffIdx)
+              }}
+            />
+          )
+        })}
+      </div>
+    )
+  }
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -277,6 +320,7 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
               onScroll={e => syncScroll(e, 'right')} spellCheck={false} wrap="off" />
           </div>
         </div>
+        {renderMinimap()}
       </div>
 
       <style>{`
@@ -290,7 +334,7 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
         .hunk-info { font-size: 0.75rem; color: #646cff; font-weight: 600; }
         .hunk-hint { font-size: 0.6rem; color: #888; margin-top: 1px; }
         
-        .side-by-side-diff { flex: 1; display: flex; overflow: hidden; }
+        .side-by-side-diff { flex: 1; display: flex; overflow: hidden; position: relative; }
         .pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; position: relative; }
         .pane-header { padding: 4px 12px; background: #333; font-size: 0.65rem; color: #888; border-bottom: 1px solid #444; text-transform: uppercase; letter-spacing: 0.5px; }
         
@@ -317,6 +361,14 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
         }
         .diff-hunk-group:hover .hunk-btn, .diff-hunk-group.selected .hunk-btn { opacity: 1; }
         
+        .diff-minimap { width: 14px; background: #252526; border-left: 1px solid #333; position: relative; cursor: pointer; }
+        .minimap-marker { position: absolute; left: 0; width: 100%; opacity: 0.6; }
+        .minimap-marker.removed { background: #e74c3c; }
+        .minimap-marker.added { background: #2ecc71; }
+        .minimap-marker.modified { background: #f1c40f; }
+        .minimap-marker.active { opacity: 1; border: 1px solid white; z-index: 2; }
+        .minimap-marker:hover { opacity: 1; }
+
         .actions { display: flex; gap: 8px; align-items: center; }
         .divider { width: 1px; height: 16px; background: #444; margin: 0 4px; }
         .actions button { padding: 4px 8px; border: none; border-radius: 4px; background: #333; color: #ccc; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }

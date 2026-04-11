@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react'
+import React, { useState, useRef, useMemo, useEffect } from 'react'
 import { ComparisonResult } from '../electron.d'
 import { File, FileText, ChevronRight, ChevronDown, Minus, Plus, ArrowRight, Trash2 } from 'lucide-react'
 
@@ -8,6 +8,7 @@ interface DualTreeViewProps {
   leftDir: string
   rightDir: string
   onRefresh: () => void
+  selectedFilePath?: string | null
 }
 
 interface TreeRow {
@@ -22,12 +23,27 @@ interface TreeRow {
   folderStatus?: 'modified' | 'left-only' | 'right-only' | 'same'
 }
 
-const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, leftDir, rightDir, onRefresh }) => {
+const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, leftDir, rightDir, onRefresh, selectedFilePath }) => {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['']))
   const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const scrollRefLeft = useRef<HTMLDivElement>(null)
   const scrollRefRight = useRef<HTMLDivElement>(null)
   const treeRef = useRef<HTMLDivElement>(null)
+  const selectedRowRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll selected row into view
+  useEffect(() => {
+    if (selectedRowRef.current) {
+      selectedRowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [selectedIndex])
+
+  // Automatically focus the tree when it mounts or results change
+  useEffect(() => {
+    if (results.length > 0 && treeRef.current) {
+      treeRef.current.focus()
+    }
+  }, [results])
 
   const normalizedResults = useMemo(() => {
     return results.map(r => ({
@@ -117,6 +133,27 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
     return rows
   }, [normalizedResults, expandedPaths])
 
+  // Sync selectedIndex with selectedFilePath or default to 0
+  useEffect(() => {
+    if (rows.length > 0) {
+      if (selectedFilePath) {
+        const index = rows.findIndex(row => row.path === selectedFilePath)
+        if (index !== -1) {
+          setSelectedIndex(index)
+          // Ensure it scrolls and focuses after a short delay to allow DOM to settle
+          setTimeout(() => {
+            if (selectedRowRef.current) {
+              selectedRowRef.current.scrollIntoView({ block: 'center', behavior: 'auto' })
+            }
+            if (treeRef.current) treeRef.current.focus()
+          }, 50)
+        }
+      } else if (selectedIndex === -1) {
+        setSelectedIndex(0)
+      }
+    }
+  }, [rows, selectedFilePath])
+
   const toggleExpand = (path: string) => {
     const next = new Set(expandedPaths)
     if (next.has(path)) next.delete(path)
@@ -197,6 +234,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
     return (
       <div 
         key={row.path} 
+        ref={isSelected ? selectedRowRef : null}
         className={`tree-row ${exists ? 'exists' : 'missing'} ${row.status || ''} ${row.isFile ? 'file' : 'folder'} ${isSelected ? 'selected' : ''}`}
         style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
         onClick={() => {
