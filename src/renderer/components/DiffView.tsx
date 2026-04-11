@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import * as Diff from 'diff'
-import { ArrowLeftRight, Save, Trash2 } from 'lucide-react'
+import { ArrowLeftRight, Save } from 'lucide-react'
 
 interface DiffViewProps {
   file: string
@@ -8,45 +8,61 @@ interface DiffViewProps {
   rightDir: string
 }
 
-interface Hunk {
-  type: 'added' | 'removed' | 'modified' | 'unchanged'
-  leftLines: string[]
-  rightLines: string[]
-  startIndex: number
-}
-
 const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
   const [leftContent, setLeftContent] = useState<string>('')
   const [rightContent, setRightContent] = useState<string>('')
   const [bufferContent, setBufferContent] = useState<string>('')
   const [isDirty, setIsDirty] = useState(false)
-  const [side, setSide] = useState<'left' | 'right'>('right') // Which side we are editing. For now, let's assume we edit the "right" side (apply left to right).
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadFiles = async () => {
-      const left = await window.api.readFile(`${leftDir}/${file}`)
-      const right = await window.api.readFile(`${rightDir}/${file}`)
-      setLeftContent(left || '')
-      setRightContent(right || '')
-      setBufferContent(right || '') // Initial buffer is the right side content
+      setLoading(true)
+      try {
+        const left = await window.api.readFile(`${leftDir}/${file}`)
+        const right = await window.api.readFile(`${rightDir}/${file}`)
+        setLeftContent(left || '')
+        setRightContent(right || '')
+        setBufferContent(right || '')
+        setIsDirty(false)
+      } catch (err) {
+        console.error('Error loading files:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     loadFiles()
   }, [file, leftDir, rightDir])
 
-  const hunks = useMemo(() => {
-    const diff = Diff.diffLines(leftContent, rightContent)
-    return diff
-  }, [leftContent, rightContent])
+  const handleCopyLeftToRight = () => {
+    setBufferContent(leftContent)
+    setIsDirty(true)
+  }
 
-  const handleApplyHunk = (index: number) => {
-    const diff = Diff.diffLines(leftContent, bufferContent)
-    const part = diff[index]
-    if (!part || !part.removed) return
+  const handleSave = async () => {
+    if (!isDirty) return
+    const targetPath = `${rightDir}/${file}`
+    const success = await window.api.saveFile(targetPath, bufferContent)
+    if (success) {
+      setIsDirty(false)
+      setRightContent(bufferContent)
+    } else {
+      alert('Failed to save file!')
+    }
+  }
 
-    // "Apply" in our context means taking a "removed" part (from Left) 
-    // and ensuring it's in the buffer, or replacing the "added" part (in Buffer) with it.
-    // This is complex to do perfectly without a full patch state.
-    // For MVP, we'll focus on the "Copy All" and visual diffing.
+  useEffect(() => {
+    const listener = () => handleSave()
+    window.addEventListener('save-current-file', listener)
+    return () => window.removeEventListener('save-current-file', listener)
+  }, [isDirty, bufferContent, rightDir, file])
+
+  const diffParts = useMemo(() => {
+    return Diff.diffLines(leftContent, bufferContent)
+  }, [leftContent, bufferContent])
+
+  if (loading) {
+    return <div className="loading-state">Loading file content...</div>
   }
 
   return (
@@ -68,7 +84,8 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
 
       <div className="diff-content-scroll">
         <div className="diff-table">
-          {Diff.diffLines(leftContent, bufferContent).map((part, i) => (
+          {diffParts.length === 0 && <div className="no-diff">No differences or file is empty.</div>}
+          {diffParts.map((part, i) => (
             <div key={i} className={`diff-part ${part.added ? 'added' : part.removed ? 'removed' : 'unchanged'}`}>
               <div className="part-content">
                 {part.value.split('\n').filter((l, idx, arr) => idx < arr.length - 1 || l !== '').map((line, li) => (
@@ -78,13 +95,10 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
                   </div>
                 ))}
               </div>
-              {(part.removed) && (
-                <button className="apply-hunk-btn" onClick={() => {
-                  // Simplified: if it's removed from left (meaning it's in Left but not in Buffer), 
-                  // we can't easily "apply" it to a specific spot without a better patcher.
-                  // We'll stick to Copy All for the first version to ensure stability.
-                  handleCopyLeftToRight()
-                }}>Apply</button>
+              {part.removed && (
+                <button className="apply-hunk-btn" onClick={() => handleCopyLeftToRight()}>
+                  Apply
+                </button>
               )}
             </div>
           ))}
@@ -92,6 +106,12 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
       </div>
 
       <style>{`
+        .loading-state, .no-diff {
+          padding: 40px;
+          text-align: center;
+          color: #888;
+          font-style: italic;
+        }
         .diff-view-container {
           display: flex;
           flex-direction: column;
@@ -142,8 +162,7 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
         .apply-hunk-btn {
           position: absolute;
           right: 20px;
-          top: 50%;
-          transform: translateY(-50%);
+          top: 5px;
           padding: 2px 8px;
           font-size: 0.7rem;
           background: #646cff;
@@ -152,6 +171,7 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir }) => {
           border-radius: 4px;
           opacity: 0;
           transition: opacity 0.2s;
+          cursor: pointer;
         }
         .diff-part:hover .apply-hunk-btn { opacity: 1; }
 

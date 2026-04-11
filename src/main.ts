@@ -106,8 +106,9 @@ ipcMain.handle('compare-folders', async (_, leftDir: string, rightDir: string, e
 
 ipcMain.handle('read-file', async (_, filePath: string) => {
   try {
-    if (!existsSync(filePath)) return null
-    return await fs.readFile(filePath, 'utf8')
+    const normalizedPath = path.normalize(filePath)
+    if (!existsSync(normalizedPath)) return null
+    return await fs.readFile(normalizedPath, 'utf8')
   } catch (err) {
     console.error(err)
     return null
@@ -116,12 +117,12 @@ ipcMain.handle('read-file', async (_, filePath: string) => {
 
 ipcMain.handle('save-file', async (_, filePath: string, content: string) => {
   try {
-    // Ensure parent directory exists (for right-only or left-only situations)
-    const dir = path.dirname(filePath)
+    const normalizedPath = path.normalize(filePath)
+    const dir = path.dirname(normalizedPath)
     if (!existsSync(dir)) {
       await fs.mkdir(dir, { recursive: true })
     }
-    await fs.writeFile(filePath, content, 'utf8')
+    await fs.writeFile(normalizedPath, content, 'utf8')
     return true
   } catch (err) {
     console.error(err)

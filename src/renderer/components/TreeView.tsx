@@ -1,14 +1,61 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { ComparisonResult } from '../electron.d'
-import { File, FileText, Folder, AlertCircle, Plus, Minus, MoveHorizontal } from 'lucide-react'
+import { File, FileText, ChevronRight, ChevronDown, AlertCircle, Plus, Minus } from 'lucide-react'
 
 interface TreeViewProps {
   results: ComparisonResult[]
   onFileSelect: (path: string) => void
 }
 
+interface TreeNode {
+  name: string
+  fullPath: string
+  children: Record<string, TreeNode>
+  isFile: boolean
+  status?: ComparisonResult['status']
+}
+
 const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
-  const getIcon = (status: ComparisonResult['status']) => {
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['root']))
+
+  const buildTree = (results: ComparisonResult[]): TreeNode => {
+    const root: TreeNode = { name: 'root', fullPath: '', children: {}, isFile: false }
+
+    results.forEach((res) => {
+      const parts = res.path.split(/[/\\]/)
+      let current = root
+      parts.forEach((part, index) => {
+        const isFile = index === parts.length - 1
+        if (!current.children[part]) {
+          current.children[part] = {
+            name: part,
+            fullPath: parts.slice(0, index + 1).join('/'),
+            children: {},
+            isFile: isFile,
+            status: isFile ? res.status : undefined,
+          }
+        }
+        current = current.children[part]
+        
+        // Inherit status for folders (simplified: if any child is modified, folder might show something)
+        // For now, let's keep status only on files.
+      })
+    })
+
+    return root
+  }
+
+  const toggleExpand = (path: string) => {
+    const next = new Set(expandedPaths)
+    if (next.has(path)) next.delete(path)
+    else next.add(path)
+    setExpandedPaths(next)
+  }
+
+  const getIcon = (status: ComparisonResult['status'] | undefined, isFile: boolean, isExpanded: boolean) => {
+    if (!isFile) {
+      return isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+    }
     switch (status) {
       case 'same': return <File size={16} className="status-same" />
       case 'modified': return <FileText size={16} className="status-modified" />
@@ -19,39 +66,61 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
     }
   }
 
-  const getStatusLabel = (status: ComparisonResult['status']) => {
-    switch (status) {
-      case 'same': return 'Same'
-      case 'modified': return 'Modified'
-      case 'left-only': return 'Left Only'
-      case 'right-only': return 'Right Only'
-      case 'error': return 'Error'
-      default: return ''
+  const renderNode = (node: TreeNode, depth: number) => {
+    const isExpanded = expandedPaths.has(node.fullPath)
+    const childKeys = Object.keys(node.children).sort((a, b) => {
+      // Folders first, then files
+      const nodeA = node.children[a]
+      const nodeB = node.children[b]
+      if (nodeA.isFile !== nodeB.isFile) return nodeA.isFile ? 1 : -1
+      return a.localeCompare(b)
+    })
+
+    if (node.name === 'root') {
+      return (
+        <div className="tree-root">
+          {childKeys.map(key => renderNode(node.children[key], 0))}
+        </div>
+      )
     }
+
+    return (
+      <div key={node.fullPath} className="tree-node-container">
+        <div 
+          className={`tree-item ${node.status || ''} ${node.isFile ? 'is-file' : 'is-folder'}`}
+          style={{ paddingLeft: `${depth * 20 + 16}px` }}
+          onClick={() => !node.isFile && toggleExpand(node.fullPath)}
+          onDoubleClick={() => node.isFile && node.status !== 'same' && onFileSelect(node.fullPath)}
+        >
+          <div className="item-content">
+            {getIcon(node.status, node.isFile, isExpanded)}
+            <span className="node-name">{node.name}</span>
+          </div>
+          {node.isFile && (
+            <div className={`item-status status-${node.status}`}>
+              {node.status}
+            </div>
+          )}
+        </div>
+        {!node.isFile && isExpanded && (
+          <div className="tree-children">
+            {childKeys.map(key => renderNode(node.children[key], depth + 1))}
+          </div>
+        )}
+      </div>
+    )
   }
+
+  const tree = buildTree(results)
 
   return (
     <div className="tree-view-container">
       <div className="tree-header">
-        <div className="header-path">Path</div>
+        <div className="header-path">File Structure</div>
         <div className="header-status">Status</div>
       </div>
       <div className="tree-body">
-        {results.map((res) => (
-          <div 
-            key={res.path} 
-            className={`tree-item ${res.status}`}
-            onDoubleClick={() => res.status !== 'same' && onFileSelect(res.path)}
-          >
-            <div className="item-path">
-              {getIcon(res.status)}
-              <span>{res.path}</span>
-            </div>
-            <div className={`item-status status-${res.status}`}>
-              {getStatusLabel(res.status)}
-            </div>
-          </div>
-        ))}
+        {renderNode(tree, 0)}
       </div>
 
       <style>{`
@@ -60,6 +129,8 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
           border-radius: 8px;
           overflow: hidden;
           border: 1px solid #444;
+          display: flex;
+          flex-direction: column;
         }
         .tree-header {
           display: flex;
@@ -76,39 +147,46 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
         .tree-body {
           max-height: 600px;
           overflow-y: auto;
+          padding: 8px 0;
         }
         .tree-item {
           display: flex;
-          padding: 6px 16px;
+          padding: 4px 16px;
           font-size: 0.9rem;
           cursor: pointer;
-          border-bottom: 1px solid #333;
           align-items: center;
+          user-select: none;
         }
         .tree-item:hover {
           background: #333;
         }
-        .item-path {
+        .item-content {
           flex: 4;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           color: #eee;
+        }
+        .node-name {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .item-status {
           flex: 1;
           text-align: right;
-          font-size: 0.8rem;
-          font-weight: 600;
+          font-size: 0.75rem;
+          text-transform: capitalize;
         }
         
-        .status-same { color: #888; }
+        .status-same { color: #666; }
         .status-modified { color: #f1c40f; }
         .status-left-only { color: #e74c3c; }
         .status-right-only { color: #2ecc71; }
         .status-error { color: #e67e22; }
 
-        .tree-item.same { opacity: 0.6; }
+        .tree-item.same { opacity: 0.5; }
+        .is-folder { font-weight: 500; color: #aaa; }
       `}</style>
     </div>
   )
