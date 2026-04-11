@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import FolderSelector from './components/FolderSelector'
 import DualTreeView from './components/DualTreeView'
 import DiffView from './components/DiffView'
@@ -15,13 +15,13 @@ const App: React.FC = () => {
   const [view, setView] = useState<AppState>('setup')
   const [excludes] = useState<string[]>(['node_modules', '.git', 'dist', 'build', '.DS_Store'])
 
-  const handleCompare = async () => {
+  const handleCompare = useCallback(async () => {
     if (!leftDir || !rightDir) return
     setView('comparing')
     const res = await window.api.compareFolders(leftDir, rightDir, excludes)
     setResults(res)
     setView('setup')
-  }
+  }, [leftDir, rightDir, excludes])
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFile(filePath)
@@ -55,6 +55,8 @@ const App: React.FC = () => {
               setLeftDir={setLeftDir}
               setRightDir={setRightDir}
               onCompare={handleCompare}
+              onRefresh={handleCompare}
+              hasResults={results.length > 0}
             />
             {results.length > 0 && (
               <DualTreeView 
@@ -70,6 +72,7 @@ const App: React.FC = () => {
             leftDir={leftDir} 
             rightDir={rightDir}
             onBack={handleBack}
+            onRefresh={handleCompare}
           />
         )}
       </main>

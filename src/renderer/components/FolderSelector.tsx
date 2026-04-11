@@ -1,5 +1,5 @@
 import React from 'react'
-import { FolderOpen, Play } from 'lucide-react'
+import { FolderOpen, Play, RotateCw } from 'lucide-react'
 
 interface FolderSelectorProps {
   leftDir: string
@@ -7,9 +7,11 @@ interface FolderSelectorProps {
   setLeftDir: (path: string) => void
   setRightDir: (path: string) => void
   onCompare: () => void
+  onRefresh: () => void
+  hasResults: boolean
 }
 
-const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setLeftDir, setRightDir, onCompare }) => {
+const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setLeftDir, setRightDir, onCompare, onRefresh, hasResults }) => {
   const handleSelect = async (side: 'left' | 'right') => {
     const path = await window.api.selectFolder()
     if (path) {
@@ -42,19 +44,26 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setL
         </div>
       </div>
 
-      <button className="compare-button" onClick={onCompare} disabled={!leftDir || !rightDir}>
-        <Play size={18} /> Compare
-      </button>
+      <div className="action-buttons">
+        <button className="compare-button" onClick={onCompare} disabled={!leftDir || !rightDir}>
+          <Play size={18} /> Compare
+        </button>
+        {hasResults && (
+          <button className="refresh-button" onClick={onRefresh} title="Refresh Comparison">
+            <RotateCw size={18} /> Refresh
+          </button>
+        )}
+      </div>
 
       <style>{`
         .folder-selector-container {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 15px;
           background: #2a2a2a;
-          padding: 20px;
+          padding: 15px;
           border-radius: 8px;
-          margin-bottom: 20px;
+          margin-bottom: 15px;
         }
         .folder-inputs {
           display: flex;
@@ -67,8 +76,9 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setL
           gap: 8px;
         }
         .folder-input-group label {
-          font-size: 0.9rem;
+          font-size: 0.8rem;
           color: #aaa;
+          text-transform: uppercase;
         }
         .input-with-button {
           display: flex;
@@ -78,27 +88,38 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setL
           flex: 1;
           background: #1a1a1a;
           border: 1px solid #444;
-          padding: 8px 12px;
+          padding: 6px 10px;
           border-radius: 4px;
           color: #eee;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
         }
-        .compare-button {
+        .action-buttons {
+          display: flex;
+          gap: 10px;
+        }
+        .compare-button, .refresh-button {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
+          padding: 6px 16px;
+          font-weight: 600;
+          font-size: 0.9rem;
+        }
+        .compare-button {
           background: #646cff;
           color: white;
-          font-weight: 600;
+          flex: 1;
         }
-        .compare-button:hover {
-          background: #535bf2;
+        .compare-button:hover { background: #535bf2; }
+        .compare-button:disabled { background: #444; cursor: not-allowed; }
+        
+        .refresh-button {
+          background: #333;
+          color: #ccc;
+          border: 1px solid #444;
         }
-        .compare-button:disabled {
-          background: #444;
-          cursor: not-allowed;
-        }
+        .refresh-button:hover { background: #444; color: white; }
       `}</style>
     </div>
   )

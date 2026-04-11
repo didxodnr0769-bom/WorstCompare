@@ -50,6 +50,7 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack }) 
     if (success) {
       setIsDirty(false)
       setRightContent(bufferContent)
+      onRefresh() // Trigger re-comparison
     } else {
       alert('Failed to save file!')
     }
