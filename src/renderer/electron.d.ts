@@ -8,6 +8,7 @@ export interface IElectronAPI {
   compareFolders: (leftDir: string, rightDir: string, excludes: string[]) => Promise<ComparisonResult[]>
   readFile: (filePath: string) => Promise<string | null>
   saveFile: (filePath: string, content: string) => Promise<boolean>
+  copyItem: (src: string, dest: string) => Promise<boolean>
 }
 
 declare global {

@@ -1,5 +1,11 @@
-import React from 'react'
-import { FolderOpen, Play, RotateCw } from 'lucide-react'
+import React, { useState } from 'react'
+import { FolderOpen, Play, RotateCw, History } from 'lucide-react'
+
+interface HistoryItem {
+  left: string
+  right: string
+  timestamp: number
+}
 
 interface FolderSelectorProps {
   leftDir: string
@@ -9,9 +15,15 @@ interface FolderSelectorProps {
   onCompare: () => void
   onRefresh: () => void
   hasResults: boolean
+  history: HistoryItem[]
+  onSelectHistory: (h: HistoryItem) => void
 }
 
-const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setLeftDir, setRightDir, onCompare, onRefresh, hasResults }) => {
+const FolderSelector: React.FC<FolderSelectorProps> = ({ 
+  leftDir, rightDir, setLeftDir, setRightDir, onCompare, onRefresh, hasResults, history, onSelectHistory 
+}) => {
+  const [showHistory, setShowHistory] = useState(false)
+
   const handleSelect = async (side: 'left' | 'right') => {
     const path = await window.api.selectFolder()
     if (path) {
@@ -53,10 +65,30 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setL
             <RotateCw size={18} /> Refresh
           </button>
         )}
+        <button 
+          className={`history-toggle ${showHistory ? 'active' : ''}`} 
+          onClick={() => setShowHistory(!showHistory)}
+          title="Comparison History"
+        >
+          <History size={18} />
+        </button>
       </div>
+
+      {showHistory && (
+        <div className="history-dropdown">
+          {history.length === 0 && <div className="no-history">No history yet.</div>}
+          {history.map((h, i) => (
+            <div key={i} className="history-item" onClick={() => { onSelectHistory(h); setShowHistory(false); }}>
+              <div className="h-path">L: {h.left}</div>
+              <div className="h-path">R: {h.right}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <style>{`
         .folder-selector-container {
+          position: relative;
           display: flex;
           flex-direction: column;
           gap: 15px;
@@ -97,7 +129,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setL
           display: flex;
           gap: 10px;
         }
-        .compare-button, .refresh-button {
+        .compare-button, .refresh-button, .history-toggle {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -105,6 +137,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setL
           padding: 6px 16px;
           font-weight: 600;
           font-size: 0.9rem;
+          border-radius: 4px;
         }
         .compare-button {
           background: #646cff;
@@ -120,6 +153,32 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({ leftDir, rightDir, setL
           border: 1px solid #444;
         }
         .refresh-button:hover { background: #444; color: white; }
+        
+        .history-toggle { background: #333; color: #ccc; padding: 6px; }
+        .history-toggle.active { background: #646cff; color: white; }
+
+        .history-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: #2a2a2a;
+          border: 1px solid #444;
+          border-top: none;
+          z-index: 100;
+          max-height: 250px;
+          overflow-y: auto;
+          box-shadow: 0 10px 15px rgba(0,0,0,0.3);
+          border-radius: 0 0 8px 8px;
+        }
+        .history-item {
+          padding: 10px 15px;
+          border-bottom: 1px solid #333;
+          cursor: pointer;
+        }
+        .history-item:hover { background: #333; }
+        .h-path { font-size: 0.75rem; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .no-history { padding: 20px; text-align: center; color: #666; font-size: 0.9rem; }
       `}</style>
     </div>
   )

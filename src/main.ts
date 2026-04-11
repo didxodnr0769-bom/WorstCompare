@@ -129,3 +129,41 @@ ipcMain.handle('save-file', async (_, filePath: string, content: string) => {
     return false
   }
 })
+
+ipcMain.handle('copy-item', async (_, src: string, dest: string) => {
+  try {
+    const srcPath = path.normalize(src)
+    const destPath = path.normalize(dest)
+    
+    const stats = await fs.stat(srcPath)
+    if (stats.isDirectory()) {
+      await fs.mkdir(path.dirname(destPath), { recursive: true })
+      // Use cp for recursive copy if available (Node 16.7+), otherwise custom recursive copy
+      if (typeof fs.cp === 'function') {
+        await fs.cp(srcPath, destPath, { recursive: true })
+      } else {
+        // Fallback for older Node versions (though Electron usually has recent Node)
+        const copyRecursive = async (s: string, d: string) => {
+          const sStats = await fs.stat(s)
+          if (sStats.isDirectory()) {
+            if (!existsSync(d)) await fs.mkdir(d, { recursive: true })
+            const items = await fs.readdir(s)
+            for (const item of items) {
+              await copyRecursive(path.join(s, item), path.join(d, item))
+            }
+          } else {
+            await fs.copyFile(s, d)
+          }
+        }
+        await copyRecursive(srcPath, destPath)
+      }
+    } else {
+      await fs.mkdir(path.dirname(destPath), { recursive: true })
+      await fs.copyFile(srcPath, destPath)
+    }
+    return true
+  } catch (err) {
+    console.error('Copy failed:', err)
+    return false
+  }
+})

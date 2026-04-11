@@ -7,21 +7,46 @@ import './App.css'
 
 export type AppState = 'setup' | 'comparing' | 'diff'
 
+interface HistoryItem {
+  left: string
+  right: string
+  timestamp: number
+}
+
 const App: React.FC = () => {
   const [leftDir, setLeftDir] = useState<string>('')
   const [rightDir, setRightDir] = useState<string>('')
   const [results, setResults] = useState<ComparisonResult[]>([])
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [view, setView] = useState<AppState>('setup')
+  const [history, setHistory] = useState<HistoryItem[]>([])
   const [excludes] = useState<string[]>(['node_modules', '.git', 'dist', 'build', '.DS_Store'])
 
-  const handleCompare = useCallback(async () => {
-    if (!leftDir || !rightDir) return
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('compare-history')
+    if (savedHistory) {
+      setHistory(JSON.parse(savedHistory))
+    }
+  }, [])
+
+  const handleCompare = useCallback(async (lDir?: string, rDir?: string) => {
+    const l = lDir || leftDir
+    const r = rDir || rightDir
+    if (!l || !r) return
+
     setView('comparing')
-    const res = await window.api.compareFolders(leftDir, rightDir, excludes)
+    const res = await window.api.compareFolders(l, r, excludes)
     setResults(res)
     setView('setup')
-  }, [leftDir, rightDir, excludes])
+
+    // Update History
+    const newHistory = [
+      { left: l, right: r, timestamp: Date.now() },
+      ...history.filter(h => h.left !== l || h.right !== r)
+    ].slice(0, 10)
+    setHistory(newHistory)
+    localStorage.setItem('compare-history', JSON.stringify(newHistory))
+  }, [leftDir, rightDir, excludes, history])
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFile(filePath)
@@ -54,14 +79,23 @@ const App: React.FC = () => {
               rightDir={rightDir}
               setLeftDir={setLeftDir}
               setRightDir={setRightDir}
-              onCompare={handleCompare}
-              onRefresh={handleCompare}
+              onCompare={() => handleCompare()}
+              onRefresh={() => handleCompare()}
               hasResults={results.length > 0}
+              history={history}
+              onSelectHistory={(h) => {
+                setLeftDir(h.left)
+                setRightDir(h.right)
+                handleCompare(h.left, h.right)
+              }}
             />
             {results.length > 0 && (
               <DualTreeView 
                 results={results} 
-                onFileSelect={handleFileSelect} 
+                onFileSelect={handleFileSelect}
+                leftDir={leftDir}
+                rightDir={rightDir}
+                onRefresh={() => handleCompare()}
               />
             )}
             {view === 'comparing' && <div className="loading-overlay">Comparing...</div>}
@@ -72,7 +106,7 @@ const App: React.FC = () => {
             leftDir={leftDir} 
             rightDir={rightDir}
             onBack={handleBack}
-            onRefresh={handleCompare}
+            onRefresh={() => handleCompare()}
           />
         )}
       </main>

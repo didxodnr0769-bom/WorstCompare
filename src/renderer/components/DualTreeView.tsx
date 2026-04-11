@@ -1,10 +1,13 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { ComparisonResult } from '../electron.d'
-import { File, FileText, ChevronRight, ChevronDown, Minus, Plus } from 'lucide-react'
+import { File, FileText, ChevronRight, ChevronDown, Minus, Plus, ArrowRight } from 'lucide-react'
 
 interface DualTreeViewProps {
   results: ComparisonResult[]
   onFileSelect: (path: string) => void
+  leftDir: string
+  rightDir: string
+  onRefresh: () => void
 }
 
 interface TreeRow {
@@ -18,7 +21,7 @@ interface TreeRow {
   hasRight: boolean
 }
 
-const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) => {
+const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, leftDir, rightDir, onRefresh }) => {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['']))
   const scrollRefLeft = useRef<HTMLDivElement>(null)
   const scrollRefRight = useRef<HTMLDivElement>(null)
@@ -104,6 +107,15 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
     }
   }
 
+  const handleCopy = async (e: React.MouseEvent, row: TreeRow) => {
+    e.stopPropagation()
+    const src = `${leftDir}/${row.path}`
+    const dest = `${rightDir}/${row.path}`
+    const success = await window.api.copyItem(src, dest)
+    if (success) onRefresh()
+    else alert('Copy failed!')
+  }
+
   const rows = generateRows()
 
   const renderRow = (row: TreeRow, side: 'left' | 'right') => {
@@ -130,6 +142,11 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
           ) : null}
         </div>
         <span className="row-name">{exists ? row.name : ''}</span>
+        {side === 'left' && row.hasLeft && row.status !== 'same' && (
+          <button className="row-copy-btn" onClick={(e) => handleCopy(e, row)} title="Copy to Right">
+            <ArrowRight size={12} />
+          </button>
+        )}
       </div>
     )
   }
@@ -137,8 +154,8 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
   return (
     <div className="dual-tree-container">
       <div className="tree-pane-header">
-        <div className="header-side">Left Side</div>
-        <div className="header-side">Right Side</div>
+        <div className="header-side">Left Side (Source)</div>
+        <div className="header-side">Right Side (Target)</div>
       </div>
       
       <div className="tree-panes">
@@ -155,7 +172,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
         .dual-tree-container {
           display: flex;
           flex-direction: column;
-          height: calc(100vh - 150px);
+          height: calc(100vh - 160px);
           background: #1a1a1a;
           border: 1px solid #333;
           border-radius: 4px;
@@ -171,6 +188,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
           font-size: 0.8rem;
           font-weight: 600;
           color: #888;
+          text-transform: uppercase;
         }
         .tree-panes {
           display: flex;
@@ -195,12 +213,27 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
           cursor: pointer;
           white-space: nowrap;
           border-bottom: 1px solid transparent;
+          position: relative;
         }
         .tree-row.exists:hover { background: #2a2d2e; }
         .tree-row.missing { cursor: default; }
         
         .icon-wrapper { width: 16px; display: flex; align-items: center; justify-content: center; }
-        .row-name { color: #ccc; }
+        .row-name { color: #ccc; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+        
+        .row-copy-btn {
+          position: absolute;
+          right: 8px;
+          padding: 2px 4px;
+          background: #646cff;
+          color: white;
+          border: none;
+          border-radius: 3px;
+          opacity: 0;
+          cursor: pointer;
+        }
+        .tree-row:hover .row-copy-btn { opacity: 1; }
+
         .status-modified { color: #f1c40f; }
         .status-left-only { color: #e74c3c; }
         .status-right-only { color: #2ecc71; }
