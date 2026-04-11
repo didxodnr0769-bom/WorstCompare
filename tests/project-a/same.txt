@@ -1,0 +1,3 @@
+This is a same file.
+Line 2 same.
+Line 3 same.
