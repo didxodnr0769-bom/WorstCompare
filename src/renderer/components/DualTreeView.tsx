@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
 import { ComparisonResult } from '../electron.d'
-import { File, FileText, ChevronRight, ChevronDown, Minus, Plus, AlertCircle } from 'lucide-react'
+import { File, FileText, ChevronRight, ChevronDown, Minus, Plus } from 'lucide-react'
 
 interface DualTreeViewProps {
   results: ComparisonResult[]
@@ -13,8 +13,7 @@ interface TreeRow {
   depth: number
   isFile: boolean
   isExpanded: boolean
-  leftStatus?: ComparisonResult['status']
-  rightStatus?: ComparisonResult['status']
+  status?: ComparisonResult['status']
   hasLeft: boolean
   hasRight: boolean
 }
@@ -24,12 +23,19 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
   const scrollRefLeft = useRef<HTMLDivElement>(null)
   const scrollRefRight = useRef<HTMLDivElement>(null)
 
-  // Generate rows for the dual tree
+  const normalizedResults = useMemo(() => {
+    return results.map(r => ({
+      ...r,
+      normalizedPath: r.path.replace(/\\/g, '/')
+    }))
+  }, [results])
+
   const generateRows = () => {
     const rows: TreeRow[] = []
     const allPaths = new Set<string>()
-    results.forEach(r => {
-      const parts = r.path.split(/[/\\]/)
+    
+    normalizedResults.forEach(r => {
+      const parts = r.normalizedPath.split('/')
       let currentPath = ''
       parts.forEach(part => {
         currentPath = currentPath ? `${currentPath}/${part}` : part
@@ -53,11 +59,22 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
       
       if (depth > 0 && !expandedPaths.has(parentPath)) return
 
-      const result = results.find(r => r.path.replace(/[\\ ]/g, '/') === path)
-      const isFile = !!result
-      
-      const hasLeft = result ? (result.status !== 'right-only') : true // Simplified for folders
-      const hasRight = result ? (result.status !== 'left-only') : true
+      const fileResult = normalizedResults.find(r => r.normalizedPath === path)
+      const isFile = !!fileResult
+
+      let hasLeft = false
+      let hasRight = false
+      let status: ComparisonResult['status'] | undefined
+
+      if (isFile) {
+        hasLeft = fileResult.status !== 'right-only'
+        hasRight = fileResult.status !== 'left-only'
+        status = fileResult.status
+      } else {
+        const children = normalizedResults.filter(r => r.normalizedPath.startsWith(path + '/'))
+        hasLeft = children.some(r => r.status !== 'right-only')
+        hasRight = children.some(r => r.status !== 'left-only')
+      }
 
       rows.push({
         path,
@@ -65,8 +82,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
         depth,
         isFile,
         isExpanded: expandedPaths.has(path),
-        leftStatus: result?.status,
-        rightStatus: result?.status,
+        status,
         hasLeft,
         hasRight
       })
@@ -90,21 +106,32 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
 
   const rows = generateRows()
 
-  const renderIcon = (row: TreeRow, side: 'left' | 'right') => {
+  const renderRow = (row: TreeRow, side: 'left' | 'right') => {
     const exists = side === 'left' ? row.hasLeft : row.hasRight
-    if (!exists) return <div style={{ width: 16 }} />
     
-    if (!row.isFile) {
-      return row.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
-    }
-
-    const status = side === 'left' ? row.leftStatus : row.rightStatus
-    switch (status) {
-      case 'modified': return <FileText size={14} className="status-modified" />
-      case 'left-only': return side === 'left' ? <Plus size={14} className="status-left-only" /> : <div style={{ width: 16 }} />
-      case 'right-only': return side === 'right' ? <Plus size={14} className="status-right-only" /> : <div style={{ width: 16 }} />
-      default: return <File size={14} className="status-same" />
-    }
+    return (
+      <div 
+        key={row.path} 
+        className={`tree-row ${exists ? 'exists' : 'missing'} ${row.status || ''} ${row.isFile ? 'file' : 'folder'}`}
+        style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
+        onClick={() => !row.isFile && exists && toggleExpand(row.path)}
+        onDoubleClick={() => row.isFile && exists && onFileSelect(row.path)}
+      >
+        <div className="icon-wrapper">
+          {exists ? (
+            !row.isFile ? (
+              row.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+            ) : (
+              row.status === 'modified' ? <FileText size={14} className="status-modified" /> :
+              row.status === 'left-only' ? (side === 'left' ? <Plus size={14} className="status-left-only" /> : <div style={{width:14}}/>) :
+              row.status === 'right-only' ? (side === 'right' ? <Plus size={14} className="status-right-only" /> : <div style={{width:14}}/>) :
+              <File size={14} className="status-same" />
+            )
+          ) : null}
+        </div>
+        <span className="row-name">{exists ? row.name : ''}</span>
+      </div>
+    )
   }
 
   return (
@@ -116,33 +143,11 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
       
       <div className="tree-panes">
         <div className="pane left-pane" ref={scrollRefLeft} onScroll={(e) => syncScroll(e, scrollRefRight)}>
-          {rows.map(row => (
-            <div 
-              key={row.path} 
-              className={`tree-row ${row.hasLeft ? '' : 'missing'} ${row.leftStatus || ''}`}
-              style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
-              onClick={() => !row.isFile && toggleExpand(row.path)}
-              onDoubleClick={() => row.isFile && onFileSelect(row.path)}
-            >
-              {renderIcon(row, 'left')}
-              <span className="row-name">{row.hasLeft ? row.name : ''}</span>
-            </div>
-          ))}
+          {rows.map(row => renderRow(row, 'left'))}
         </div>
 
         <div className="pane right-pane" ref={scrollRefRight} onScroll={(e) => syncScroll(e, scrollRefLeft)}>
-          {rows.map(row => (
-            <div 
-              key={row.path} 
-              className={`tree-row ${row.hasRight ? '' : 'missing'} ${row.rightStatus || ''}`}
-              style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
-              onClick={() => !row.isFile && toggleExpand(row.path)}
-              onDoubleClick={() => row.isFile && onFileSelect(row.path)}
-            >
-              {renderIcon(row, 'right')}
-              <span className="row-name">{row.hasRight ? row.name : ''}</span>
-            </div>
-          ))}
+          {rows.map(row => renderRow(row, 'right'))}
         </div>
       </div>
 
@@ -150,7 +155,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
         .dual-tree-container {
           display: flex;
           flex-direction: column;
-          height: calc(100vh - 180px);
+          height: calc(100vh - 150px);
           background: #1a1a1a;
           border: 1px solid #333;
           border-radius: 4px;
@@ -166,7 +171,6 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
           font-size: 0.8rem;
           font-weight: 600;
           color: #888;
-          text-transform: uppercase;
         }
         .tree-panes {
           display: flex;
@@ -176,33 +180,35 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect }) =>
         .pane {
           flex: 1;
           overflow-y: auto;
+          overflow-x: hidden;
           border-right: 1px solid #333;
         }
-        .pane::-webkit-scrollbar { width: 8px; }
-        .pane::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .pane::-webkit-scrollbar { width: 6px; }
+        .pane::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         
         .tree-row {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 4px 0;
+          height: 28px;
           font-size: 0.85rem;
           cursor: pointer;
           white-space: nowrap;
           border-bottom: 1px solid transparent;
         }
-        .tree-row:hover { background: #2a2d2e; }
-        .tree-row.missing { opacity: 0; pointer-events: none; }
+        .tree-row.exists:hover { background: #2a2d2e; }
+        .tree-row.missing { cursor: default; }
         
+        .icon-wrapper { width: 16px; display: flex; align-items: center; justify-content: center; }
         .row-name { color: #ccc; }
         .status-modified { color: #f1c40f; }
         .status-left-only { color: #e74c3c; }
         .status-right-only { color: #2ecc71; }
         .status-same { color: #666; }
         
-        .tree-row.modified { background: rgba(241, 196, 15, 0.05); }
-        .tree-row.left-only { background: rgba(231, 76, 60, 0.05); }
-        .tree-row.right-only { background: rgba(46, 204, 113, 0.05); }
+        .tree-row.modified.exists { background: rgba(241, 196, 15, 0.05); }
+        .tree-row.left-only.exists { background: rgba(231, 76, 60, 0.05); }
+        .tree-row.right-only.exists { background: rgba(46, 204, 113, 0.05); }
       `}</style>
     </div>
   )
