@@ -20,7 +20,7 @@ const App: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [view, setView] = useState<AppState>('setup')
   const [history, setHistory] = useState<HistoryItem[]>([])
-  const [excludes] = useState<string[]>(['node_modules', '.git', 'dist', 'build', '.DS_Store'])
+  const [excludes, setExcludes] = useState<string>('node_modules, .git, dist, build, .DS_Store')
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('compare-history')
@@ -34,8 +34,10 @@ const App: React.FC = () => {
     const r = rDir || rightDir
     if (!l || !r) return
 
+    const excludeList = excludes.split(',').map(s => s.trim()).filter(Boolean)
+
     setView('comparing')
-    const res = await window.api.compareFolders(l, r, excludes)
+    const res = await window.api.compareFolders(l, r, excludeList)
     setResults(res)
     setView('setup')
 
@@ -68,6 +70,8 @@ const App: React.FC = () => {
               rightDir={rightDir}
               setLeftDir={setLeftDir}
               setRightDir={setRightDir}
+              excludes={excludes}
+              setExcludes={setExcludes}
               onCompare={() => handleCompare()}
               onRefresh={() => handleCompare()}
               hasResults={results.length > 0}

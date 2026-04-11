@@ -12,6 +12,8 @@ interface FolderSelectorProps {
   rightDir: string
   setLeftDir: (path: string) => void
   setRightDir: (path: string) => void
+  excludes: string
+  setExcludes: (val: string) => void
   onCompare: () => void
   onRefresh: () => void
   hasResults: boolean
@@ -20,7 +22,7 @@ interface FolderSelectorProps {
 }
 
 const FolderSelector: React.FC<FolderSelectorProps> = ({ 
-  leftDir, rightDir, setLeftDir, setRightDir, onCompare, onRefresh, hasResults, history, onSelectHistory 
+  leftDir, rightDir, setLeftDir, setRightDir, excludes, setExcludes, onCompare, onRefresh, hasResults, history, onSelectHistory 
 }) => {
   const [showHistory, setShowHistory] = useState(false)
 
@@ -54,6 +56,17 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="folder-input-group">
+        <label>Exclude Patterns (comma separated)</label>
+        <input 
+          type="text" 
+          value={excludes} 
+          onChange={(e) => setExcludes(e.target.value)} 
+          placeholder="node_modules, .git, ..." 
+          className="exclude-input"
+        />
       </div>
 
       <div className="action-buttons">
@@ -124,6 +137,15 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           border-radius: 4px;
           color: #eee;
           font-size: 0.85rem;
+        }
+        .exclude-input {
+          background: #1a1a1a;
+          border: 1px solid #444;
+          padding: 6px 10px;
+          border-radius: 4px;
+          color: #eee;
+          font-size: 0.85rem;
+          width: 100%;
         }
         .action-buttons {
           display: flex;

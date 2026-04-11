@@ -235,7 +235,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
       <div 
         key={row.path} 
         ref={isSelected ? selectedRowRef : null}
-        className={`tree-row ${exists ? 'exists' : 'missing'} ${row.status || ''} ${row.isFile ? 'file' : 'folder'} ${isSelected ? 'selected' : ''}`}
+        className={`tree-row ${exists ? 'exists' : 'missing'} ${row.status || ''} ${row.folderStatus || ''} ${row.isFile ? 'file' : 'folder'} ${isSelected ? 'selected' : ''}`}
         style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
         onClick={() => {
           setSelectedIndex(index)
@@ -246,7 +246,9 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
         <div className="icon-wrapper">
           {exists ? (
             !row.isFile ? (
-              row.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+              <span className={`folder-icon status-${row.folderStatus}`}>
+                {row.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
             ) : (
               row.status === 'modified' ? <FileText size={14} className="status-modified" /> :
               row.status === 'left-only' ? (side === 'left' ? <Plus size={14} className="status-left-only" /> : <div style={{width:14}}/>) :
@@ -264,7 +266,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
         </div>
         <span className="row-name">
           {exists ? row.name : ''}
-          {!exists && !row.isFile && row.folderStatus !== 'same' && (
+          {!row.isFile && row.folderStatus !== 'same' && (!row.isExpanded || !exists) && (
             <span className={`folder-status-hint ${row.folderStatus}`}>
               ({row.folderStatus === 'modified' ? 'diff' : row.folderStatus === 'left-only' ? 'only left' : 'only right'})
             </span>
@@ -370,6 +372,9 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({ results, onFileSelect, left
         .tree-row.missing { cursor: default; }
         
         .icon-wrapper { width: 16px; display: flex; align-items: center; justify-content: center; }
+        .folder-icon.status-modified { color: #f1c40f; }
+        .folder-icon.status-left-only { color: #e74c3c; }
+        .folder-icon.status-right-only { color: #2ecc71; }
         .row-name { color: #ccc; flex: 1; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
         
         .folder-status-hint { font-size: 0.7rem; opacity: 0.6; }
