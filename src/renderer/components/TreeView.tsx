@@ -125,21 +125,21 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
 
       <style>{`
         .tree-view-container {
-          background: #2a2a2a;
+          background: var(--card-bg);
           border-radius: 8px;
           overflow: hidden;
-          border: 1px solid #444;
+          border: 1px solid var(--border-color);
           display: flex;
           flex-direction: column;
         }
         .tree-header {
           display: flex;
-          background: #1a1a1a;
+          background: var(--header-bg);
           padding: 8px 16px;
           font-weight: 600;
           font-size: 0.85rem;
-          color: #888;
-          border-bottom: 1px solid #444;
+          color: var(--label-color);
+          border-bottom: 1px solid var(--border-color);
         }
         .header-path { flex: 4; }
         .header-status { flex: 1; text-align: right; }
@@ -158,14 +158,14 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
           user-select: none;
         }
         .tree-item:hover {
-          background: #333;
+          background: var(--tree-row-hover);
         }
         .item-content {
           flex: 4;
           display: flex;
           align-items: center;
           gap: 8px;
-          color: #eee;
+          color: var(--text-color);
         }
         .node-name {
           white-space: nowrap;
@@ -179,14 +179,14 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
           text-transform: capitalize;
         }
         
-        .status-same { color: #666; }
-        .status-modified { color: #f1c40f; }
-        .status-left-only { color: #e74c3c; }
-        .status-right-only { color: #2ecc71; }
+        .status-same { color: var(--status-same); }
+        .status-modified { color: var(--status-modified); }
+        .status-left-only { color: var(--status-left-only); }
+        .status-right-only { color: var(--status-right-only); }
         .status-error { color: #e67e22; }
 
         .tree-item.same { opacity: 0.5; }
-        .is-folder { font-weight: 500; color: #aaa; }
+        .is-folder { font-weight: 500; color: var(--label-color); }
       `}</style>
     </div>
   )

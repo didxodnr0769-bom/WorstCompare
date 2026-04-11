@@ -105,10 +105,11 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           display: flex;
           flex-direction: column;
           gap: 15px;
-          background: #2a2a2a;
+          background: var(--card-bg);
           padding: 15px;
           border-radius: 8px;
           margin-bottom: 15px;
+          border: 1px solid var(--border-color);
         }
         .folder-inputs {
           display: flex;
@@ -122,7 +123,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
         }
         .folder-input-group label {
           font-size: 0.8rem;
-          color: #aaa;
+          color: var(--label-color);
           text-transform: uppercase;
         }
         .input-with-button {
@@ -131,19 +132,19 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
         }
         .input-with-button input {
           flex: 1;
-          background: #1a1a1a;
-          border: 1px solid #444;
+          background: var(--input-bg);
+          border: 1px solid var(--input-border);
           padding: 6px 10px;
           border-radius: 4px;
-          color: #eee;
+          color: var(--input-text);
           font-size: 0.85rem;
         }
         .exclude-input {
-          background: #1a1a1a;
-          border: 1px solid #444;
+          background: var(--input-bg);
+          border: 1px solid var(--input-border);
           padding: 6px 10px;
           border-radius: 4px;
-          color: #eee;
+          color: var(--input-text);
           font-size: 0.85rem;
           width: 100%;
         }
@@ -165,27 +166,28 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           background: #646cff;
           color: white;
           flex: 1;
+          border: none;
         }
         .compare-button:hover { background: #535bf2; }
-        .compare-button:disabled { background: #444; cursor: not-allowed; }
+        .compare-button:disabled { background: var(--secondary-button-bg); color: var(--secondary-button-text); cursor: not-allowed; }
         
         .refresh-button {
-          background: #333;
-          color: #ccc;
-          border: 1px solid #444;
+          background: var(--secondary-button-bg);
+          color: var(--secondary-button-text);
+          border: 1px solid var(--input-border);
         }
-        .refresh-button:hover { background: #444; color: white; }
+        .refresh-button:hover { background: var(--tree-row-hover); color: var(--text-color); }
         
-        .history-toggle { background: #333; color: #ccc; padding: 6px; }
-        .history-toggle.active { background: #646cff; color: white; }
+        .history-toggle { background: var(--secondary-button-bg); color: var(--secondary-button-text); padding: 6px; border: 1px solid var(--input-border); }
+        .history-toggle.active { background: #646cff; color: white; border-color: #646cff; }
 
         .history-dropdown {
           position: absolute;
           top: 100%;
           left: 0;
           right: 0;
-          background: #2a2a2a;
-          border: 1px solid #444;
+          background: var(--card-bg);
+          border: 1px solid var(--input-border);
           border-top: none;
           z-index: 100;
           max-height: 250px;
@@ -195,12 +197,12 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
         }
         .history-item {
           padding: 10px 15px;
-          border-bottom: 1px solid #333;
+          border-bottom: 1px solid var(--border-color);
           cursor: pointer;
         }
-        .history-item:hover { background: #333; }
-        .h-path { font-size: 0.75rem; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .no-history { padding: 20px; text-align: center; color: #666; font-size: 0.9rem; }
+        .history-item:hover { background: var(--tree-row-hover); }
+        .h-path { font-size: 0.75rem; color: var(--label-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .no-history { padding: 20px; text-align: center; color: var(--label-color); font-size: 0.9rem; }
       `}</style>
     </div>
   )

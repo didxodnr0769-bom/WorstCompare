@@ -292,19 +292,19 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
       </div>
 
       <style>{`
-        .diff-view-container { display: flex; flex-direction: column; height: 100%; background: #1e1e1e; color: #ccc; }
-        .diff-toolbar { display: flex; justify-content: space-between; padding: 8px 16px; background: #252526; border-bottom: 1px solid #333; align-items: center; }
+        .diff-view-container { display: flex; flex-direction: column; height: 100%; background: var(--bg-color); color: var(--text-color); }
+        .diff-toolbar { display: flex; justify-content: space-between; padding: 8px 16px; background: var(--header-bg); border-bottom: 1px solid var(--border-color); align-items: center; }
         .toolbar-left { display: flex; align-items: center; gap: 12px; }
-        .file-name { font-family: sans-serif; font-size: 0.85rem; font-weight: 600; }
-        .dirty-indicator { color: #f1c40f; margin-left: 4px; }
+        .file-name { font-family: sans-serif; font-size: 0.85rem; font-weight: 600; color: var(--text-color); }
+        .dirty-indicator { color: var(--status-modified); margin-left: 4px; }
         .hunk-nav { display: flex; flex: 1; justify-content: center; }
-        .hunk-status { display: flex; flex-direction: column; align-items: center; background: #333; padding: 2px 16px; border-radius: 20px; }
+        .hunk-status { display: flex; flex-direction: column; align-items: center; background: var(--secondary-button-bg); padding: 2px 16px; border-radius: 20px; border: 1px solid var(--border-color); }
         .hunk-info { font-size: 0.75rem; color: #646cff; font-weight: 600; }
-        .hunk-hint { font-size: 0.6rem; color: #888; }
+        .hunk-hint { font-size: 0.6rem; color: var(--label-color); }
         
         .side-by-side-diff { flex: 1; display: flex; overflow: hidden; position: relative; }
-        .pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; }
-        .pane-header { padding: 4px 12px; background: #333; font-size: 0.65rem; color: #888; border-bottom: 1px solid #444; }
+        .pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
+        .pane-header { padding: 4px 12px; background: var(--tree-pane-header-bg); font-size: 0.65rem; color: var(--label-color); border-bottom: 1px solid var(--border-color); }
         
         .pane-content-wrapper { flex: 1; position: relative; overflow: hidden; padding: 10px 0; }
         .sync-editor, .diff-bg {
@@ -313,31 +313,32 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
           font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: ${LINE_HEIGHT}px;
           white-space: pre; tab-size: 4; box-sizing: border-box;
         }
-        .sync-editor { background: transparent; color: #ddd; resize: none; z-index: 2; caret-color: white; overflow: auto; }
+        .sync-editor { background: transparent; color: var(--text-color); resize: none; z-index: 2; caret-color: var(--text-color); overflow: auto; }
         .diff-bg { color: transparent; user-select: none; pointer-events: none; z-index: 1; overflow: hidden; }
 
         .diff-lines-container { display: flex; flex-direction: column; }
         .diff-line-bg { position: relative; width: 100%; display: block; }
-        .diff-line-bg.removed { background: rgba(231, 76, 60, 0.25); }
-        .diff-line-bg.added { background: rgba(46, 204, 113, 0.25); }
+        .diff-line-bg.removed { background: var(--diff-removed-bg); }
+        .diff-line-bg.added { background: var(--diff-added-bg); }
         .diff-line-bg.hunk-selected { background: rgba(100, 108, 255, 0.2); box-shadow: inset 0 1px 0 rgba(100,108,255,0.5), inset 0 -1px 0 rgba(100,108,255,0.5); }
         
         .hunk-actions-floating { position: absolute; right: 4px; top: 2px; z-index: 10; pointer-events: auto; }
         .hunk-btn-mini { background: #646cff; color: white; border: none; border-radius: 3px; padding: 2px; cursor: pointer; display: flex; opacity: 0.6; }
         .hunk-btn-mini:hover { opacity: 1; }
         
-        .diff-minimap { width: 14px; background: #252526; border-left: 1px solid #333; position: relative; cursor: pointer; }
+        .diff-minimap { width: 14px; background: var(--header-bg); border-left: 1px solid var(--border-color); position: relative; cursor: pointer; }
         .minimap-marker { position: absolute; left: 0; width: 100%; opacity: 0.6; }
-        .minimap-marker.removed { background: #e74c3c; }
-        .minimap-marker.added { background: #2ecc71; }
-        .minimap-marker.modified { background: #f1c40f; }
-        .minimap-marker.active { opacity: 1; box-shadow: 0 0 0 1px white inset; }
+        .minimap-marker.removed { background: var(--status-left-only); }
+        .minimap-marker.added { background: var(--status-right-only); }
+        .minimap-marker.modified { background: var(--status-modified); }
+        .minimap-marker.active { opacity: 1; box-shadow: 0 0 0 1px var(--text-color) inset; }
 
         .actions { display: flex; gap: 8px; align-items: center; padding-right: 10px; }
-        .divider { width: 1px; height: 16px; background: #444; }
-        .actions button { padding: 4px 8px; border: none; border-radius: 4px; background: #333; color: #ccc; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }
-        .save-btn { background: #2ecc71 !important; color: white !important; }
-        .loading-state { padding: 40px; text-align: center; }
+        .divider { width: 1px; height: 16px; background: var(--border-color); }
+        .actions button { padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--secondary-button-bg); color: var(--secondary-button-text); cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }
+        .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .save-btn { background: var(--status-right-only) !important; color: white !important; border: none !important; }
+        .loading-state { padding: 40px; text-align: center; color: var(--text-color); }
       `}</style>
     </div>
   )

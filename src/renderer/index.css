@@ -3,14 +3,95 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Theme variables - Default Dark */
+  --bg-color: #242424;
+  --text-color: rgba(255, 255, 255, 0.87);
+  --button-bg: #1a1a1a;
+  --button-hover-border: #646cff;
+  --border-color: #333;
+  --header-bg: #1a1a1a;
+  --card-bg: #2a2a2a;
+  --input-bg: #1a1a1a;
+  --input-border: #444;
+  --input-text: #eee;
+  --label-color: #aaa;
+  --secondary-button-bg: #333;
+  --secondary-button-text: #ccc;
+  --tree-pane-header-bg: #252526;
+  --tree-row-hover: #2a2d2e;
+  --tree-row-selected: #37373d;
+  --tree-row-text: #ccc;
+  --status-modified: #f1c40f;
+  --status-left-only: #e74c3c;
+  --status-right-only: #2ecc71;
+  --status-same: #666;
+}
+
+:root.light-theme {
+  color-scheme: light;
+  --bg-color: #fdfdfd;
+  --text-color: #1a1a1a;
+  --button-bg: #f0f0f0;
+  --button-hover-border: #646cff;
+  --border-color: #d0d0d0;
+  --header-bg: #ffffff;
+  --card-bg: #f5f5f5;
+  --input-bg: #ffffff;
+  --input-border: #bbb;
+  --input-text: #1a1a1a;
+  --label-color: #555;
+  --secondary-button-bg: #e5e5e5;
+  --secondary-button-text: #333;
+  --tree-pane-header-bg: #eeeeee;
+  --tree-row-hover: #e0e0e0;
+  --tree-row-selected: #cce0ff;
+  --tree-row-text: #1a1a1a;
+  
+  /* More vibrant colors for light mode */
+  --status-modified: #b7950b; /* Darker Gold */
+  --status-left-only: #cb4335; /* Stronger Red */
+  --status-right-only: #1e8449; /* Stronger Green */
+  --status-same: #707070;
+  
+  /* Background tints for diffs - Light mode needs more opacity */
+  --diff-added-bg: rgba(46, 204, 113, 0.25);
+  --diff-removed-bg: rgba(231, 76, 60, 0.25);
+  --diff-modified-bg: rgba(241, 196, 15, 0.15);
+}
+
+:root.dark-theme {
+  color-scheme: dark;
+  --bg-color: #242424;
+  --text-color: rgba(255, 255, 255, 0.87);
+  --button-bg: #1a1a1a;
+  --button-hover-border: #646cff;
+  --border-color: #333;
+  --header-bg: #1a1a1a;
+  --card-bg: #2a2a2a;
+  --input-bg: #1a1a1a;
+  --input-border: #444;
+  --input-text: #eee;
+  --label-color: #aaa;
+  --secondary-button-bg: #333;
+  --secondary-button-text: #ccc;
+  --tree-pane-header-bg: #252526;
+  --tree-row-hover: #2a2d2e;
+  --tree-row-selected: #37373d;
+  --tree-row-text: #ccc;
+  --status-modified: #f1c40f;
+  --status-left-only: #e74c3c;
+  --status-right-only: #2ecc71;
+  --status-same: #666;
+
+  /* Background tints for diffs - Dark mode uses lower opacity */
+  --diff-added-bg: rgba(46, 204, 113, 0.15);
+  --diff-removed-bg: rgba(231, 76, 60, 0.15);
+  --diff-modified-bg: rgba(241, 196, 15, 0.05);
 }
 
 body {
@@ -19,6 +100,8 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 #root {
@@ -35,12 +118,13 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--button-bg);
+  color: inherit;
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--button-hover-border);
 }
 button:focus,
 button:focus-visible {

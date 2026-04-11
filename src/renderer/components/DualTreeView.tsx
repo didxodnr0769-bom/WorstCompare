@@ -331,8 +331,8 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
           display: flex;
           flex-direction: column;
           height: calc(100vh - 160px);
-          background: #1a1a1a;
-          border: 1px solid #333;
+          background: var(--button-bg);
+          border: 1px solid var(--border-color);
           border-radius: 4px;
         }
         .dual-tree-container:focus-within {
@@ -340,15 +340,15 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
         }
         .tree-pane-header {
           display: flex;
-          background: #252526;
-          border-bottom: 1px solid #333;
+          background: var(--tree-pane-header-bg);
+          border-bottom: 1px solid var(--border-color);
         }
         .header-side {
           flex: 1;
           padding: 8px 16px;
           font-size: 0.8rem;
           font-weight: 600;
-          color: #888;
+          color: var(--label-color);
           text-transform: uppercase;
         }
         .tree-panes {
@@ -360,10 +360,10 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
           flex: 1;
           overflow-y: auto;
           overflow-x: hidden;
-          border-right: 1px solid #333;
+          border-right: 1px solid var(--border-color);
         }
         .pane::-webkit-scrollbar { width: 6px; }
-        .pane::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        .pane::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
         
         .tree-row {
           display: flex;
@@ -376,20 +376,20 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
           border-bottom: 1px solid transparent;
           position: relative;
         }
-        .tree-row.exists:hover { background: #2a2d2e; }
-        .tree-row.selected { background: #37373d !important; }
+        .tree-row.exists:hover { background: var(--tree-row-hover); }
+        .tree-row.selected { background: var(--tree-row-selected) !important; }
         .tree-row.missing { cursor: default; }
         
         .icon-wrapper { width: 16px; display: flex; align-items: center; justify-content: center; }
-        .folder-icon.status-modified { color: #f1c40f; }
-        .folder-icon.status-left-only { color: #e74c3c; }
-        .folder-icon.status-right-only { color: #2ecc71; }
-        .row-name { color: #ccc; flex: 1; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
+        .folder-icon.status-modified { color: var(--status-modified); }
+        .folder-icon.status-left-only { color: var(--status-left-only); }
+        .folder-icon.status-right-only { color: var(--status-right-only); }
+        .row-name { color: var(--tree-row-text); flex: 1; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
         
         .folder-status-hint { font-size: 0.7rem; opacity: 0.6; }
-        .folder-status-hint.modified { color: #f1c40f; }
-        .folder-status-hint.left-only { color: #e74c3c; }
-        .folder-status-hint.right-only { color: #2ecc71; }
+        .folder-status-hint.modified { color: var(--status-modified); }
+        .folder-status-hint.left-only { color: var(--status-left-only); }
+        .folder-status-hint.right-only { color: var(--status-right-only); }
 
         .row-actions {
           position: absolute;
@@ -411,17 +411,17 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
           align-items: center;
         }
         .row-btn.copy { background: #646cff; }
-        .row-btn.delete { background: #e74c3c; }
+        .row-btn.delete { background: var(--status-left-only); }
         .row-btn:hover { filter: brightness(1.2); }
 
-        .status-modified { color: #f1c40f; }
-        .status-left-only { color: #e74c3c; }
-        .status-right-only { color: #2ecc71; }
-        .status-same { color: #666; }
+        .status-modified { color: var(--status-modified); }
+        .status-left-only { color: var(--status-left-only); }
+        .status-right-only { color: var(--status-right-only); }
+        .status-same { color: var(--status-same); }
         
-        .tree-row.modified.exists { background: rgba(241, 196, 15, 0.05); }
-        .tree-row.left-only.exists { background: rgba(231, 76, 60, 0.05); }
-        .tree-row.right-only.exists { background: rgba(46, 204, 113, 0.05); }
+        .tree-row.modified.exists { background: var(--diff-modified-bg); }
+        .tree-row.left-only.exists { background: var(--diff-removed-bg); }
+        .tree-row.right-only.exists { background: var(--diff-added-bg); }
       `}</style>
     </div>
   )

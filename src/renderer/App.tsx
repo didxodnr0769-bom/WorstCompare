@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { Sun, Moon } from 'lucide-react'
 import FolderSelector from './components/FolderSelector'
 import DualTreeView from './components/DualTreeView'
 import DiffView from './components/DiffView'
@@ -6,6 +7,7 @@ import { ComparisonResult } from './electron.d'
 import './App.css'
 
 export type AppState = 'setup' | 'comparing' | 'diff'
+export type Theme = 'dark' | 'light'
 
 interface HistoryItem {
   left: string
@@ -22,6 +24,10 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [excludes, setExcludes] = useState<string>('node_modules, .git, dist, build, .DS_Store')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['']))
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('app-theme') as Theme
+    return saved || 'dark'
+  })
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('compare-history')
@@ -29,6 +35,15 @@ const App: React.FC = () => {
       setHistory(JSON.parse(savedHistory))
     }
   }, [])
+
+  useEffect(() => {
+    document.documentElement.className = `${theme}-theme`
+    localStorage.setItem('app-theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+  }
 
   const handleCompare = useCallback(async (lDir?: string, rDir?: string) => {
     const l = lDir || leftDir
@@ -63,6 +78,12 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
+      <header className="app-header">
+        <h1>Worst Compare</h1>
+        <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+      </header>
       <main className="app-main">
         {view !== 'diff' ? (
           <div className="workspace">
