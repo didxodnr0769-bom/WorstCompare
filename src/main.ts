@@ -42,7 +42,11 @@ ipcMain.handle('select-folder', async () => {
   return result.filePaths[0]
 })
 
-async function getFilesRecursively(dir: string, baseDir: string, excludes: string[]): Promise<string[]> {
+async function getFilesRecursively(
+  dir: string,
+  baseDir: string,
+  excludes: string[]
+): Promise<string[]> {
   const files: string[] = []
   const items = await fs.readdir(dir, { withFileTypes: true })
 
@@ -55,7 +59,7 @@ async function getFilesRecursively(dir: string, baseDir: string, excludes: strin
     }
 
     if (item.isDirectory()) {
-      files.push(...await getFilesRecursively(fullPath, baseDir, excludes))
+      files.push(...(await getFilesRecursively(fullPath, baseDir, excludes)))
     } else {
       files.push(relativePath)
     }
@@ -63,46 +67,49 @@ async function getFilesRecursively(dir: string, baseDir: string, excludes: strin
   return files
 }
 
-ipcMain.handle('compare-folders', async (_, leftDir: string, rightDir: string, excludes: string[]) => {
-  const leftFiles = await getFilesRecursively(leftDir, leftDir, excludes)
-  const rightFiles = await getFilesRecursively(rightDir, rightDir, excludes)
+ipcMain.handle(
+  'compare-folders',
+  async (_, leftDir: string, rightDir: string, excludes: string[]) => {
+    const leftFiles = await getFilesRecursively(leftDir, leftDir, excludes)
+    const rightFiles = await getFilesRecursively(rightDir, rightDir, excludes)
 
-  const allFiles = Array.from(new Set([...leftFiles, ...rightFiles])).sort()
-  const results = []
+    const allFiles = Array.from(new Set([...leftFiles, ...rightFiles])).sort()
+    const results = []
 
-  for (const file of allFiles) {
-    const leftPath = path.join(leftDir, file)
-    const rightPath = path.join(rightDir, file)
+    for (const file of allFiles) {
+      const leftPath = path.join(leftDir, file)
+      const rightPath = path.join(rightDir, file)
 
-    const leftExists = existsSync(leftPath)
-    const rightExists = existsSync(rightPath)
+      const leftExists = existsSync(leftPath)
+      const rightExists = existsSync(rightPath)
 
-    if (leftExists && rightExists) {
-      try {
-        const leftContent = await fs.readFile(leftPath, 'utf8')
-        const rightContent = await fs.readFile(rightPath, 'utf8')
+      if (leftExists && rightExists) {
+        try {
+          const leftContent = await fs.readFile(leftPath, 'utf8')
+          const rightContent = await fs.readFile(rightPath, 'utf8')
 
-        // Normalizing line endings for comparison as per PRD
-        const leftNormalized = leftContent.replace(/\r\n/g, '\n')
-        const rightNormalized = rightContent.replace(/\r\n/g, '\n')
+          // Normalizing line endings for comparison as per PRD
+          const leftNormalized = leftContent.replace(/\r\n/g, '\n')
+          const rightNormalized = rightContent.replace(/\r\n/g, '\n')
 
-        if (leftNormalized === rightNormalized) {
-          results.push({ path: file, status: 'same' })
-        } else {
-          results.push({ path: file, status: 'modified' })
+          if (leftNormalized === rightNormalized) {
+            results.push({ path: file, status: 'same' })
+          } else {
+            results.push({ path: file, status: 'modified' })
+          }
+        } catch (_err) {
+          results.push({ path: file, status: 'error' })
         }
-      } catch (err) {
-        results.push({ path: file, status: 'error' })
+      } else if (leftExists) {
+        results.push({ path: file, status: 'left-only' })
+      } else {
+        results.push({ path: file, status: 'right-only' })
       }
-    } else if (leftExists) {
-      results.push({ path: file, status: 'left-only' })
-    } else {
-      results.push({ path: file, status: 'right-only' })
     }
-  }
 
-  return results
-})
+    return results
+  }
+)
 
 ipcMain.handle('read-file', async (_, filePath: string) => {
   try {
@@ -134,7 +141,7 @@ ipcMain.handle('copy-item', async (_, src: string, dest: string) => {
   try {
     const srcPath = path.normalize(src)
     const destPath = path.normalize(dest)
-    
+
     const stats = await fs.stat(srcPath)
     if (stats.isDirectory()) {
       await fs.mkdir(path.dirname(destPath), { recursive: true })

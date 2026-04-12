@@ -1,6 +1,15 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react'
-import { ComparisonResult } from '../electron.d'
-import { File, FileText, ChevronRight, ChevronDown, Minus, Plus, ArrowRight, Trash2 } from 'lucide-react'
+import { ComparisonResult, Action } from '../electron.d'
+import {
+  File,
+  FileText,
+  ChevronRight,
+  ChevronDown,
+  Minus,
+  Plus,
+  ArrowRight,
+  Trash2,
+} from 'lucide-react'
 
 interface DualTreeViewProps {
   results: ComparisonResult[]
@@ -11,7 +20,7 @@ interface DualTreeViewProps {
   selectedFilePath?: string | null
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
-  onAction?: (action: any) => void
+  onAction?: (action: Action) => void
 }
 
 interface TreeRow {
@@ -26,8 +35,16 @@ interface TreeRow {
   folderStatus?: 'modified' | 'left-only' | 'right-only' | 'same'
 }
 
-const DualTreeView: React.FC<DualTreeViewProps> = ({ 
-  results, onFileSelect, leftDir, rightDir, onRefresh, selectedFilePath, expandedPaths, setExpandedPaths, onAction
+const DualTreeView: React.FC<DualTreeViewProps> = ({
+  results,
+  onFileSelect,
+  leftDir,
+  rightDir,
+  onRefresh,
+  selectedFilePath,
+  expandedPaths,
+  setExpandedPaths,
+  onAction,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const scrollRefLeft = useRef<HTMLDivElement>(null)
@@ -50,14 +67,14 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   const normalizedResults = useMemo(() => {
     return results.map(r => ({
       ...r,
-      normalizedPath: r.path.replace(/\\/g, '/')
+      normalizedPath: r.path.replace(/\\/g, '/'),
     }))
   }, [results])
 
   const rows = useMemo(() => {
     const rows: TreeRow[] = []
     const allPaths = new Set<string>()
-    
+
     normalizedResults.forEach(r => {
       const parts = r.normalizedPath.split('/')
       let currentPath = ''
@@ -72,8 +89,8 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
       const bParts = b.split('/')
       for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
         if (aParts[i] !== bParts[i]) {
-          const aPathSoFar = aParts.slice(0, i+1).join('/')
-          const bPathSoFar = bParts.slice(0, i+1).join('/')
+          const aPathSoFar = aParts.slice(0, i + 1).join('/')
+          const bPathSoFar = bParts.slice(0, i + 1).join('/')
           const aIsFolder = !normalizedResults.some(r => r.normalizedPath === aPathSoFar)
           const bIsFolder = !normalizedResults.some(r => r.normalizedPath === bPathSoFar)
           if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1
@@ -86,7 +103,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     sortedPaths.forEach(path => {
       const parts = path.split('/')
       const depth = parts.length - 1
-      
+
       if (depth > 0) {
         let currentAncestor = ''
         for (let i = 0; i < parts.length - 1; i++) {
@@ -98,10 +115,10 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
       const fileResult = normalizedResults.find(r => r.normalizedPath === path)
       const isFile = !!fileResult
 
-      let hasLeft = false
-      let hasRight = false
+      let hasLeft: boolean
+      let hasRight: boolean
       let status: ComparisonResult['status'] | undefined
-      let folderStatus: TreeRow['folderStatus']
+      let folderStatus: TreeRow['folderStatus'] | undefined
 
       if (isFile) {
         hasLeft = fileResult.status !== 'right-only'
@@ -111,10 +128,11 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
         const children = normalizedResults.filter(r => r.normalizedPath.startsWith(path + '/'))
         hasLeft = children.some(r => r.status !== 'right-only')
         hasRight = children.some(r => r.status !== 'left-only')
-        
+
         const childStatuses = children.map(c => c.status)
         if (childStatuses.includes('modified')) folderStatus = 'modified'
-        else if (childStatuses.includes('left-only') && childStatuses.includes('right-only')) folderStatus = 'modified'
+        else if (childStatuses.includes('left-only') && childStatuses.includes('right-only'))
+          folderStatus = 'modified'
         else if (childStatuses.includes('left-only')) folderStatus = 'left-only'
         else if (childStatuses.includes('right-only')) folderStatus = 'right-only'
         else folderStatus = 'same'
@@ -129,28 +147,41 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
         status,
         hasLeft,
         hasRight,
-        folderStatus
+        folderStatus,
       })
     })
 
     return rows
   }, [normalizedResults, expandedPaths])
 
-  useEffect(() => {
+  const [prevRows, setPrevRows] = useState(rows)
+  const [prevSelectedFilePath, setPrevSelectedFilePath] = useState(selectedFilePath)
+
+  if (rows !== prevRows || selectedFilePath !== prevSelectedFilePath) {
+    setPrevRows(rows)
+    setPrevSelectedFilePath(selectedFilePath)
     if (rows.length > 0) {
       if (selectedFilePath) {
         const index = rows.findIndex(row => row.path === selectedFilePath)
-        if (index !== -1) {
+        if (index !== -1 && index !== selectedIndex) {
           setSelectedIndex(index)
-          setTimeout(() => {
-            if (selectedRowRef.current) {
-              selectedRowRef.current.scrollIntoView({ block: 'center', behavior: 'auto' })
-            }
-            if (treeRef.current) treeRef.current.focus()
-          }, 50)
         }
       } else if (selectedIndex === -1) {
         setSelectedIndex(0)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (rows.length > 0 && selectedFilePath) {
+      const index = rows.findIndex(row => row.path === selectedFilePath)
+      if (index !== -1) {
+        setTimeout(() => {
+          if (selectedRowRef.current) {
+            selectedRowRef.current.scrollIntoView({ block: 'center', behavior: 'auto' })
+          }
+          if (treeRef.current) treeRef.current.focus()
+        }, 50)
       }
     }
   }, [rows, selectedFilePath])
@@ -162,18 +193,25 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     setExpandedPaths(next)
   }
 
-  const syncScroll = (e: React.UIEvent<HTMLDivElement>, target: React.RefObject<HTMLDivElement>) => {
+  const syncScroll = (
+    e: React.UIEvent<HTMLDivElement>,
+    target: React.RefObject<HTMLDivElement>
+  ) => {
     if (target.current) {
       target.current.scrollTop = e.currentTarget.scrollTop
     }
   }
 
-  const handleCopy = async (e: React.MouseEvent | null, row: TreeRow, direction: 'to-right' | 'to-left') => {
+  const handleCopy = async (
+    e: React.MouseEvent | null,
+    row: TreeRow,
+    direction: 'to-right' | 'to-left'
+  ) => {
     e?.stopPropagation()
     const src = direction === 'to-right' ? `${leftDir}/${row.path}` : `${rightDir}/${row.path}`
     const dest = direction === 'to-right' ? `${rightDir}/${row.path}` : `${leftDir}/${row.path}`
-    
-    let action: any
+
+    let action: Action
 
     if (row.isFile) {
       const previousContent = await window.api.readFile(dest)
@@ -182,27 +220,31 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
         side: direction === 'to-right' ? 'right' : 'left',
         path: row.path,
         previousStatus: row.status,
-        previousContent: previousContent
+        previousContent: previousContent,
       }
     } else {
       // 폴더인 경우: 하위 파일들의 상태를 모두 기록
-      const children = normalizedResults.filter(r => r.normalizedPath.startsWith(row.path + '/') && r.status !== 'same')
-      const subActions = await Promise.all(children.map(async c => {
-        const cDest = direction === 'to-right' ? `${rightDir}/${c.path}` : `${leftDir}/${c.path}`
-        const prevContent = await window.api.readFile(cDest)
-        return {
-          type: 'copy',
-          side: direction === 'to-right' ? 'right' : 'left',
-          path: c.path,
-          previousStatus: c.status,
-          previousContent: prevContent
-        }
-      }))
+      const children = normalizedResults.filter(
+        r => r.normalizedPath.startsWith(row.path + '/') && r.status !== 'same'
+      )
+      const subActions = await Promise.all(
+        children.map(async c => {
+          const cDest = direction === 'to-right' ? `${rightDir}/${c.path}` : `${leftDir}/${c.path}`
+          const prevContent = await window.api.readFile(cDest)
+          return {
+            type: 'copy',
+            side: direction === 'to-right' ? 'right' : 'left',
+            path: c.path,
+            previousStatus: c.status,
+            previousContent: prevContent,
+          }
+        })
+      )
       action = {
         type: 'batch',
         side: direction === 'to-right' ? 'right' : 'left',
         path: row.path,
-        subActions: subActions
+        subActions: subActions,
       }
     }
 
@@ -220,8 +262,8 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
 
     const targetBase = side === 'left' ? leftDir : rightDir
     const target = `${targetBase}/${row.path}`
-    
-    let action: any
+
+    let action: Action
 
     if (row.isFile) {
       const previousContent = await window.api.readFile(target)
@@ -230,27 +272,29 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
         side: side,
         path: row.path,
         previousStatus: row.status,
-        previousContent: previousContent
+        previousContent: previousContent,
       }
     } else {
       // 폴더 삭제인 경우
       const children = normalizedResults.filter(r => r.normalizedPath.startsWith(row.path + '/'))
-      const subActions = await Promise.all(children.map(async c => {
-        const cTarget = side === 'left' ? `${leftDir}/${c.path}` : `${rightDir}/${c.path}`
-        const prevContent = await window.api.readFile(cTarget)
-        return {
-          type: 'delete',
-          side: side,
-          path: c.path,
-          previousStatus: c.status,
-          previousContent: prevContent
-        }
-      }))
+      const subActions = await Promise.all(
+        children.map(async c => {
+          const cTarget = side === 'left' ? `${leftDir}/${c.path}` : `${rightDir}/${c.path}`
+          const prevContent = await window.api.readFile(cTarget)
+          return {
+            type: 'delete',
+            side: side,
+            path: c.path,
+            previousStatus: c.status,
+            previousContent: prevContent,
+          }
+        })
+      )
       action = {
         type: 'batch',
         side: side,
         path: row.path,
-        subActions: subActions
+        subActions: subActions,
       }
     }
 
@@ -303,10 +347,10 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   const renderRow = (row: TreeRow, side: 'left' | 'right', index: number) => {
     const exists = side === 'left' ? row.hasLeft : row.hasRight
     const isSelected = selectedIndex === index
-    
+
     return (
-      <div 
-        key={row.path} 
+      <div
+        key={row.path}
         ref={isSelected ? selectedRowRef : null}
         className={`tree-row ${exists ? 'exists' : 'missing'} ${row.status || ''} ${row.folderStatus || ''} ${row.isFile ? 'file' : 'folder'} ${isSelected ? 'selected' : ''}`}
         style={{ paddingLeft: `${row.depth * 20 + 10}px` }}
@@ -322,43 +366,82 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
               <span className={`folder-icon status-${row.folderStatus}`}>
                 {row.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </span>
+            ) : row.status === 'modified' ? (
+              <FileText size={14} className="status-modified" />
+            ) : row.status === 'left-only' ? (
+              side === 'left' ? (
+                <Plus size={14} className="status-left-only" />
+              ) : (
+                <div style={{ width: 14 }} />
+              )
+            ) : row.status === 'right-only' ? (
+              side === 'right' ? (
+                <Plus size={14} className="status-right-only" />
+              ) : (
+                <div style={{ width: 14 }} />
+              )
             ) : (
-              row.status === 'modified' ? <FileText size={14} className="status-modified" /> :
-              row.status === 'left-only' ? (side === 'left' ? <Plus size={14} className="status-left-only" /> : <div style={{width:14}}/>) :
-              row.status === 'right-only' ? (side === 'right' ? <Plus size={14} className="status-right-only" /> : <div style={{width:14}}/>) :
               <File size={14} className="status-same" />
             )
           ) : (
-            !row.isFile && (
-              row.folderStatus === 'modified' ? <Minus size={14} className="status-modified" /> :
-              row.folderStatus === 'left-only' ? (side === 'left' ? <Plus size={14} className="status-left-only" /> : <div style={{width:14}}/>) :
-              row.folderStatus === 'right-only' ? (side === 'right' ? <Plus size={14} className="status-right-only" /> : <div style={{width:14}}/>) :
-              null
-            )
+            !row.isFile &&
+            (row.folderStatus === 'modified' ? (
+              <Minus size={14} className="status-modified" />
+            ) : row.folderStatus === 'left-only' ? (
+              side === 'left' ? (
+                <Plus size={14} className="status-left-only" />
+              ) : (
+                <div style={{ width: 14 }} />
+              )
+            ) : row.folderStatus === 'right-only' ? (
+              side === 'right' ? (
+                <Plus size={14} className="status-right-only" />
+              ) : (
+                <div style={{ width: 14 }} />
+              )
+            ) : null)
           )}
         </div>
         <span className="row-name">
           {exists ? row.name : ''}
           {!row.isFile && row.folderStatus !== 'same' && (!row.isExpanded || !exists) && (
             <span className={`folder-status-hint ${row.folderStatus}`}>
-              ({row.folderStatus === 'modified' ? 'diff' : row.folderStatus === 'left-only' ? 'only left' : 'only right'})
+              (
+              {row.folderStatus === 'modified'
+                ? 'diff'
+                : row.folderStatus === 'left-only'
+                  ? 'only left'
+                  : 'only right'}
+              )
             </span>
           )}
         </span>
-        
+
         <div className="row-actions">
           {side === 'left' && row.hasLeft && row.status !== 'same' && (
-            <button className="row-btn copy" onClick={(e) => handleCopy(e, row, 'to-right')} title="Copy to Right">
+            <button
+              className="row-btn copy"
+              onClick={e => handleCopy(e, row, 'to-right')}
+              title="Copy to Right"
+            >
               <ArrowRight size={12} />
             </button>
           )}
           {side === 'right' && row.hasRight && row.status !== 'same' && (
-            <button className="row-btn copy" onClick={(e) => handleCopy(e, row, 'to-left')} title="Copy to Left">
+            <button
+              className="row-btn copy"
+              onClick={e => handleCopy(e, row, 'to-left')}
+              title="Copy to Left"
+            >
               <ArrowRight size={12} style={{ transform: 'rotate(180deg)' }} />
             </button>
           )}
           {exists && (
-            <button className="row-btn delete" onClick={(e) => handleDelete(e, row, side)} title="Delete">
+            <button
+              className="row-btn delete"
+              onClick={e => handleDelete(e, row, side)}
+              title="Delete"
+            >
               <Trash2 size={12} />
             </button>
           )}
@@ -368,10 +451,10 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   }
 
   return (
-    <div 
-      className="dual-tree-container" 
-      ref={treeRef} 
-      tabIndex={0} 
+    <div
+      className="dual-tree-container"
+      ref={treeRef}
+      tabIndex={0}
       onKeyDown={handleKeyDown}
       style={{ outline: 'none' }}
     >
@@ -379,13 +462,21 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
         <div className="header-side">Left Side (Source)</div>
         <div className="header-side">Right Side (Target)</div>
       </div>
-      
+
       <div className="tree-panes">
-        <div className="pane left-pane" ref={scrollRefLeft} onScroll={(e) => syncScroll(e, scrollRefRight)}>
+        <div
+          className="pane left-pane"
+          ref={scrollRefLeft}
+          onScroll={e => syncScroll(e, scrollRefRight)}
+        >
           {rows.map((row, i) => renderRow(row, 'left', i))}
         </div>
 
-        <div className="pane right-pane" ref={scrollRefRight} onScroll={(e) => syncScroll(e, scrollRefLeft)}>
+        <div
+          className="pane right-pane"
+          ref={scrollRefRight}
+          onScroll={e => syncScroll(e, scrollRefLeft)}
+        >
           {rows.map((row, i) => renderRow(row, 'right', i))}
         </div>
       </div>

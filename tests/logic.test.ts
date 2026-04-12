@@ -6,7 +6,9 @@ interface ComparisonResult {
   status: 'same' | 'modified' | 'left-only' | 'right-only' | 'error'
 }
 
-function calculateFolderStatus(children: ComparisonResult[]): 'modified' | 'left-only' | 'right-only' | 'same' {
+function calculateFolderStatus(
+  children: ComparisonResult[]
+): 'modified' | 'left-only' | 'right-only' | 'same' {
   const childStatuses = children.map(c => c.status)
   if (childStatuses.includes('modified')) return 'modified'
   if (childStatuses.includes('left-only') && childStatuses.includes('right-only')) return 'modified'
@@ -21,7 +23,11 @@ interface HistoryState {
   right: string
 }
 
-function pushHistory(history: HistoryState[], index: number, newState: HistoryState): { history: HistoryState[], index: number } {
+function pushHistory(
+  history: HistoryState[],
+  index: number,
+  newState: HistoryState
+): { history: HistoryState[]; index: number } {
   const nextHistory = history.slice(0, index + 1)
   // 동일한 상태면 무시
   if (nextHistory.length > 0) {
@@ -44,7 +50,7 @@ describe('핵심 로직 테스트', () => {
     it('자식 요소 중 하나라도 수정되었다면 "modified"를 반환해야 함', () => {
       const children: ComparisonResult[] = [
         { path: 'a.txt', status: 'same' },
-        { path: 'b.txt', status: 'modified' }
+        { path: 'b.txt', status: 'modified' },
       ]
       expect(calculateFolderStatus(children)).toBe('modified')
     })
@@ -52,7 +58,7 @@ describe('핵심 로직 테스트', () => {
     it('좌측과 우측 모두에 고유한 파일이 있다면 "modified"를 반환해야 함', () => {
       const children: ComparisonResult[] = [
         { path: 'only-a.txt', status: 'left-only' },
-        { path: 'only-b.txt', status: 'right-only' }
+        { path: 'only-b.txt', status: 'right-only' },
       ]
       expect(calculateFolderStatus(children)).toBe('modified')
     })
@@ -62,7 +68,7 @@ describe('핵심 로직 테스트', () => {
     it('새로운 상태를 추가하면 인덱스가 증가해야 함', () => {
       let history: HistoryState[] = [{ left: '1', right: '1' }]
       let index = 0
-      
+
       const result = pushHistory(history, index, { left: '2', right: '1' })
       expect(result.history.length).toBe(2)
       expect(result.index).toBe(1)
@@ -73,10 +79,10 @@ describe('핵심 로직 테스트', () => {
       let history: HistoryState[] = [
         { left: '1', right: '1' },
         { left: '2', right: '1' },
-        { left: '3', right: '1' }
+        { left: '3', right: '1' },
       ]
       let index = 1 // Undo 한 번 수행한 상태 (index: 1)
-      
+
       const result = pushHistory(history, index, { left: '2-new', right: '1' })
       expect(result.history.length).toBe(3)
       expect(result.index).toBe(2)

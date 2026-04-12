@@ -25,9 +25,22 @@ interface FolderSelectorProps {
   canRedo: boolean
 }
 
-const FolderSelector: React.FC<FolderSelectorProps> = ({ 
-  leftDir, rightDir, setLeftDir, setRightDir, excludes, setExcludes, onCompare, onRefresh, hasResults, history, onSelectHistory,
-  onUndo, onRedo, canUndo, canRedo
+const FolderSelector: React.FC<FolderSelectorProps> = ({
+  leftDir,
+  rightDir,
+  setLeftDir,
+  setRightDir,
+  excludes,
+  setExcludes,
+  onCompare,
+  onRefresh,
+  hasResults,
+  history,
+  onSelectHistory,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }) => {
   const [showHistory, setShowHistory] = useState(false)
 
@@ -65,11 +78,11 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
 
       <div className="folder-input-group">
         <label>Exclude Patterns (comma separated)</label>
-        <input 
-          type="text" 
-          value={excludes} 
-          onChange={(e) => setExcludes(e.target.value)} 
-          placeholder="node_modules, .git, ..." 
+        <input
+          type="text"
+          value={excludes}
+          onChange={e => setExcludes(e.target.value)}
+          placeholder="node_modules, .git, ..."
           className="exclude-input"
         />
       </div>
@@ -89,8 +102,8 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
             <RotateCw size={18} /> Refresh
           </button>
         )}
-        <button 
-          className={`history-toggle ${showHistory ? 'active' : ''}`} 
+        <button
+          className={`history-toggle ${showHistory ? 'active' : ''}`}
           onClick={() => setShowHistory(!showHistory)}
           title="Comparison History"
         >
@@ -102,7 +115,14 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
         <div className="history-dropdown">
           {history.length === 0 && <div className="no-history">No history yet.</div>}
           {history.map((h, i) => (
-            <div key={i} className="history-item" onClick={() => { onSelectHistory(h); setShowHistory(false); }}>
+            <div
+              key={i}
+              className="history-item"
+              onClick={() => {
+                onSelectHistory(h)
+                setShowHistory(false)
+              }}
+            >
               <div className="h-path">L: {h.left}</div>
               <div className="h-path">R: {h.right}</div>
             </div>

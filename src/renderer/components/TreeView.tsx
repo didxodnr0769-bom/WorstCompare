@@ -21,7 +21,7 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
   const buildTree = (results: ComparisonResult[]): TreeNode => {
     const root: TreeNode = { name: 'root', fullPath: '', children: {}, isFile: false }
 
-    results.forEach((res) => {
+    results.forEach(res => {
       const parts = res.path.split(/[/\\]/)
       let current = root
       parts.forEach((part, index) => {
@@ -36,7 +36,7 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
           }
         }
         current = current.children[part]
-        
+
         // Inherit status for folders (simplified: if any child is modified, folder might show something)
         // For now, let's keep status only on files.
       })
@@ -52,17 +52,27 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
     setExpandedPaths(next)
   }
 
-  const getIcon = (status: ComparisonResult['status'] | undefined, isFile: boolean, isExpanded: boolean) => {
+  const getIcon = (
+    status: ComparisonResult['status'] | undefined,
+    isFile: boolean,
+    isExpanded: boolean
+  ) => {
     if (!isFile) {
       return isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
     }
     switch (status) {
-      case 'same': return <File size={16} className="status-same" />
-      case 'modified': return <FileText size={16} className="status-modified" />
-      case 'left-only': return <Minus size={16} className="status-left-only" />
-      case 'right-only': return <Plus size={16} className="status-right-only" />
-      case 'error': return <AlertCircle size={16} className="status-error" />
-      default: return <File size={16} />
+      case 'same':
+        return <File size={16} className="status-same" />
+      case 'modified':
+        return <FileText size={16} className="status-modified" />
+      case 'left-only':
+        return <Minus size={16} className="status-left-only" />
+      case 'right-only':
+        return <Plus size={16} className="status-right-only" />
+      case 'error':
+        return <AlertCircle size={16} className="status-error" />
+      default:
+        return <File size={16} />
     }
   }
 
@@ -78,15 +88,13 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
 
     if (node.name === 'root') {
       return (
-        <div className="tree-root">
-          {childKeys.map(key => renderNode(node.children[key], 0))}
-        </div>
+        <div className="tree-root">{childKeys.map(key => renderNode(node.children[key], 0))}</div>
       )
     }
 
     return (
       <div key={node.fullPath} className="tree-node-container">
-        <div 
+        <div
           className={`tree-item ${node.status || ''} ${node.isFile ? 'is-file' : 'is-folder'}`}
           style={{ paddingLeft: `${depth * 20 + 16}px` }}
           onClick={() => !node.isFile && toggleExpand(node.fullPath)}
@@ -96,11 +104,7 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
             {getIcon(node.status, node.isFile, isExpanded)}
             <span className="node-name">{node.name}</span>
           </div>
-          {node.isFile && (
-            <div className={`item-status status-${node.status}`}>
-              {node.status}
-            </div>
-          )}
+          {node.isFile && <div className={`item-status status-${node.status}`}>{node.status}</div>}
         </div>
         {!node.isFile && isExpanded && (
           <div className="tree-children">
@@ -119,9 +123,7 @@ const TreeView: React.FC<TreeViewProps> = ({ results, onFileSelect }) => {
         <div className="header-path">File Structure</div>
         <div className="header-status">Status</div>
       </div>
-      <div className="tree-body">
-        {renderNode(tree, 0)}
-      </div>
+      <div className="tree-body">{renderNode(tree, 0)}</div>
 
       <style>{`
         .tree-view-container {

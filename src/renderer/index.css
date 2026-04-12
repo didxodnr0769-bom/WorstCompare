@@ -1,4 +1,6 @@
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -55,13 +57,13 @@
   --tree-row-hover: #e0e0e0;
   --tree-row-selected: #cce0ff;
   --tree-row-text: #1a1a1a;
-  
+
   /* More vibrant colors for light mode */
   --status-modified: #b7950b; /* Darker Gold */
   --status-left-only: #cb4335; /* Stronger Red */
   --status-right-only: #1e8449; /* Stronger Green */
   --status-same: #707070;
-  
+
   /* Background tints for diffs - Light mode needs more opacity */
   --diff-added-bg: rgba(46, 204, 113, 0.25);
   --diff-removed-bg: rgba(231, 76, 60, 0.25);
