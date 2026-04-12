@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FolderOpen, Play, RotateCw, History } from 'lucide-react'
+import { FolderOpen, Play, RotateCw, History, Undo2, Redo2 } from 'lucide-react'
 
 interface HistoryItem {
   left: string
@@ -19,10 +19,15 @@ interface FolderSelectorProps {
   hasResults: boolean
   history: HistoryItem[]
   onSelectHistory: (h: HistoryItem) => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
 }
 
 const FolderSelector: React.FC<FolderSelectorProps> = ({ 
-  leftDir, rightDir, setLeftDir, setRightDir, excludes, setExcludes, onCompare, onRefresh, hasResults, history, onSelectHistory 
+  leftDir, rightDir, setLeftDir, setRightDir, excludes, setExcludes, onCompare, onRefresh, hasResults, history, onSelectHistory,
+  onUndo, onRedo, canUndo, canRedo
 }) => {
   const [showHistory, setShowHistory] = useState(false)
 
@@ -72,6 +77,12 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
       <div className="action-buttons">
         <button className="compare-button" onClick={onCompare} disabled={!leftDir || !rightDir}>
           <Play size={18} /> Compare
+        </button>
+        <button className="undo-button" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+          <Undo2 size={18} />
+        </button>
+        <button className="redo-button" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)">
+          <Redo2 size={18} />
         </button>
         {hasResults && (
           <button className="refresh-button" onClick={onRefresh} title="Refresh Comparison">
@@ -155,7 +166,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           display: flex;
           gap: 10px;
         }
-        .compare-button, .refresh-button, .history-toggle {
+        .compare-button, .refresh-button, .history-toggle, .undo-button, .redo-button {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -172,16 +183,23 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           border: none;
         }
         .compare-button:hover { background: #535bf2; }
-        .compare-button:disabled { background: var(--secondary-button-bg); color: var(--secondary-button-text); cursor: not-allowed; }
+        .compare-button:disabled { background: var(--secondary-button-bg); color: var(--secondary-button-text); cursor: not-allowed; opacity: 0.6; }
         
-        .refresh-button {
+        .undo-button, .redo-button, .refresh-button, .history-toggle {
           background: var(--secondary-button-bg);
           color: var(--secondary-button-text);
           border: 1px solid var(--input-border);
+          padding: 6px 12px;
         }
-        .refresh-button:hover { background: var(--tree-row-hover); color: var(--text-color); }
+        .undo-button:hover:not(:disabled), .redo-button:hover:not(:disabled), .refresh-button:hover, .history-toggle:hover { 
+          background: var(--tree-row-hover); 
+          color: var(--text-color); 
+        }
+        .undo-button:disabled, .redo-button:disabled {
+          cursor: not-allowed;
+          opacity: 0.3;
+        }
         
-        .history-toggle { background: var(--secondary-button-bg); color: var(--secondary-button-text); padding: 6px; border: 1px solid var(--input-border); }
         .history-toggle.active { background: #646cff; color: white; border-color: #646cff; }
 
         .history-dropdown {

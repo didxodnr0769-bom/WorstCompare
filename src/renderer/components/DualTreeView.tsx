@@ -11,6 +11,7 @@ interface DualTreeViewProps {
   selectedFilePath?: string | null
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
+  onAction?: (action: any) => void
 }
 
 interface TreeRow {
@@ -26,7 +27,7 @@ interface TreeRow {
 }
 
 const DualTreeView: React.FC<DualTreeViewProps> = ({ 
-  results, onFileSelect, leftDir, rightDir, onRefresh, selectedFilePath, expandedPaths, setExpandedPaths 
+  results, onFileSelect, leftDir, rightDir, onRefresh, selectedFilePath, expandedPaths, setExpandedPaths, onAction
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const scrollRefLeft = useRef<HTMLDivElement>(null)
@@ -34,14 +35,12 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   const treeRef = useRef<HTMLDivElement>(null)
   const selectedRowRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll selected row into view
   useEffect(() => {
     if (selectedRowRef.current) {
       selectedRowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
     }
   }, [selectedIndex])
 
-  // Automatically focus the tree when it mounts or results change
   useEffect(() => {
     if (results.length > 0 && treeRef.current) {
       treeRef.current.focus()
@@ -72,10 +71,6 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
       const aParts = a.split('/')
       const bParts = b.split('/')
       for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
-        const aIsFile = normalizedResults.some(r => r.normalizedPath === aParts.slice(0, i+1).join('/'))
-        const bIsFile = normalizedResults.some(r => r.normalizedPath === bParts.slice(0, i+1).join('/'))
-        
-        // Folders before files
         if (aParts[i] !== bParts[i]) {
           const aPathSoFar = aParts.slice(0, i+1).join('/')
           const bPathSoFar = bParts.slice(0, i+1).join('/')
@@ -92,7 +87,6 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
       const parts = path.split('/')
       const depth = parts.length - 1
       
-      // Check if all ancestor folders are expanded
       if (depth > 0) {
         let currentAncestor = ''
         for (let i = 0; i < parts.length - 1; i++) {
@@ -142,14 +136,12 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     return rows
   }, [normalizedResults, expandedPaths])
 
-  // Sync selectedIndex with selectedFilePath or default to 0
   useEffect(() => {
     if (rows.length > 0) {
       if (selectedFilePath) {
         const index = rows.findIndex(row => row.path === selectedFilePath)
         if (index !== -1) {
           setSelectedIndex(index)
-          // Ensure it scrolls and focuses after a short delay to allow DOM to settle
           setTimeout(() => {
             if (selectedRowRef.current) {
               selectedRowRef.current.scrollIntoView({ block: 'center', behavior: 'auto' })
@@ -180,9 +172,45 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     e?.stopPropagation()
     const src = direction === 'to-right' ? `${leftDir}/${row.path}` : `${rightDir}/${row.path}`
     const dest = direction === 'to-right' ? `${rightDir}/${row.path}` : `${leftDir}/${row.path}`
+    
+    let action: any
+
+    if (row.isFile) {
+      const previousContent = await window.api.readFile(dest)
+      action = {
+        type: 'copy',
+        side: direction === 'to-right' ? 'right' : 'left',
+        path: row.path,
+        previousStatus: row.status,
+        previousContent: previousContent
+      }
+    } else {
+      // 폴더인 경우: 하위 파일들의 상태를 모두 기록
+      const children = normalizedResults.filter(r => r.normalizedPath.startsWith(row.path + '/') && r.status !== 'same')
+      const subActions = await Promise.all(children.map(async c => {
+        const cDest = direction === 'to-right' ? `${rightDir}/${c.path}` : `${leftDir}/${c.path}`
+        const prevContent = await window.api.readFile(cDest)
+        return {
+          type: 'copy',
+          side: direction === 'to-right' ? 'right' : 'left',
+          path: c.path,
+          previousStatus: c.status,
+          previousContent: prevContent
+        }
+      }))
+      action = {
+        type: 'batch',
+        side: direction === 'to-right' ? 'right' : 'left',
+        path: row.path,
+        subActions: subActions
+      }
+    }
+
     const success = await window.api.copyItem(src, dest)
-    if (success) onRefresh()
-    else alert('Copy failed!')
+    if (success) {
+      if (onAction) onAction(action)
+      onRefresh()
+    } else alert('Copy failed!')
   }
 
   const handleDelete = async (e: React.MouseEvent | null, row: TreeRow, side: 'left' | 'right') => {
@@ -192,9 +220,45 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
 
     const targetBase = side === 'left' ? leftDir : rightDir
     const target = `${targetBase}/${row.path}`
+    
+    let action: any
+
+    if (row.isFile) {
+      const previousContent = await window.api.readFile(target)
+      action = {
+        type: 'delete',
+        side: side,
+        path: row.path,
+        previousStatus: row.status,
+        previousContent: previousContent
+      }
+    } else {
+      // 폴더 삭제인 경우
+      const children = normalizedResults.filter(r => r.normalizedPath.startsWith(row.path + '/'))
+      const subActions = await Promise.all(children.map(async c => {
+        const cTarget = side === 'left' ? `${leftDir}/${c.path}` : `${rightDir}/${c.path}`
+        const prevContent = await window.api.readFile(cTarget)
+        return {
+          type: 'delete',
+          side: side,
+          path: c.path,
+          previousStatus: c.status,
+          previousContent: prevContent
+        }
+      }))
+      action = {
+        type: 'batch',
+        side: side,
+        path: row.path,
+        subActions: subActions
+      }
+    }
+
     const success = await window.api.deleteItem(target)
-    if (success) onRefresh()
-    else alert('Delete failed!')
+    if (success) {
+      if (onAction) onAction(action)
+      onRefresh()
+    } else alert('Delete failed!')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
