@@ -406,6 +406,14 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
     </div>
   )
 
+  const getFolderName = (pathStr: string) => {
+    const parts = pathStr.split(/[\\/]/).filter(Boolean)
+    return parts.length > 0 ? parts[parts.length - 1] : pathStr
+  }
+
+  const leftFolderName = getFolderName(leftDir)
+  const rightFolderName = getFolderName(rightDir)
+
   if (loading) return <div className="loading-state">Loading...</div>
 
   return (
@@ -455,7 +463,9 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
 
       <div className="side-by-side-diff">
         <div className="pane left">
-          <div className="pane-header">LEFT (SOURCE)</div>
+          <div className="pane-header" title={leftDir}>
+            {leftFolderName} (LEFT)
+          </div>
           <div className="pane-content-wrapper">
             <div className="diff-bg" ref={bgRefLeft}>
               {renderBackground('left')}
@@ -475,7 +485,9 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
           </div>
         </div>
         <div className="pane right">
-          <div className="pane-header">RIGHT (TARGET)</div>
+          <div className="pane-header" title={rightDir}>
+            {rightFolderName} (RIGHT)
+          </div>
           <div className="pane-content-wrapper">
             <div className="diff-bg" ref={bgRefRight}>
               {renderBackground('right')}

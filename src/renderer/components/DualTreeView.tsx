@@ -450,6 +450,14 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     )
   }
 
+  const getFolderName = (pathStr: string) => {
+    const parts = pathStr.split(/[\\/]/).filter(Boolean)
+    return parts.length > 0 ? parts[parts.length - 1] : pathStr
+  }
+
+  const leftFolderName = getFolderName(leftDir)
+  const rightFolderName = getFolderName(rightDir)
+
   return (
     <div
       className="dual-tree-container"
@@ -459,8 +467,12 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
       style={{ outline: 'none' }}
     >
       <div className="tree-pane-header">
-        <div className="header-side">Left Side (Source)</div>
-        <div className="header-side">Right Side (Target)</div>
+        <div className="header-side" title={leftDir}>
+          {leftFolderName} (Left)
+        </div>
+        <div className="header-side" title={rightDir}>
+          {rightFolderName} (Right)
+        </div>
       </div>
 
       <div className="tree-panes">
@@ -504,7 +516,6 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
           font-size: 0.8rem;
           font-weight: 600;
           color: var(--label-color);
-          text-transform: uppercase;
         }
         .tree-panes {
           display: flex;
