@@ -22,7 +22,10 @@ const App: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [view, setView] = useState<AppState>('setup')
   const [history, setHistory] = useState<HistoryItem[]>([])
-  const [excludes, setExcludes] = useState<string>('node_modules, .git, dist, build, .DS_Store')
+  const [excludes, setExcludes] = useState<string>(() => {
+    const saved = localStorage.getItem('app-excludes')
+    return saved !== null ? saved : 'node_modules, .git, dist, build, .DS_Store'
+  })
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['']))
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('app-theme') as Theme
@@ -43,6 +46,10 @@ const App: React.FC = () => {
     document.documentElement.className = `${theme}-theme`
     localStorage.setItem('app-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem('app-excludes', excludes)
+  }, [excludes])
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
