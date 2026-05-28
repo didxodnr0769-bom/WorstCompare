@@ -195,7 +195,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
 
   const syncScroll = (
     e: React.UIEvent<HTMLDivElement>,
-    target: React.RefObject<HTMLDivElement>
+    target: React.RefObject<HTMLDivElement | null>
   ) => {
     if (target.current) {
       target.current.scrollTop = e.currentTarget.scrollTop
@@ -227,7 +227,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
       const children = normalizedResults.filter(
         r => r.normalizedPath.startsWith(row.path + '/') && r.status !== 'same'
       )
-      const subActions = await Promise.all(
+      const subActions: Action[] = await Promise.all(
         children.map(async c => {
           const cDest = direction === 'to-right' ? `${rightDir}/${c.path}` : `${leftDir}/${c.path}`
           const prevContent = await window.api.readFile(cDest)
@@ -277,7 +277,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     } else {
       // 폴더 삭제인 경우
       const children = normalizedResults.filter(r => r.normalizedPath.startsWith(row.path + '/'))
-      const subActions = await Promise.all(
+      const subActions: Action[] = await Promise.all(
         children.map(async c => {
           const cTarget = side === 'left' ? `${leftDir}/${c.path}` : `${rightDir}/${c.path}`
           const prevContent = await window.api.readFile(cTarget)
