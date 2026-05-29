@@ -55,11 +55,14 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   const selectedRowRef = useRef<HTMLDivElement>(null)
   // 복사/삭제가 진행되는 동안 중복 실행(더블클릭, 단축키)을 막는 동기 가드
   const busyRef = useRef(false)
+  // 키보드 탐색(↑/↓)으로 선택이 바뀔 때만 스크롤하도록 하는 플래그.
+  // 폴더 펼침/접힘으로 인한 선택 인덱스 재계산 시에는 스크롤하지 않는다.
+  const navScrollRef = useRef(false)
 
   useEffect(() => {
-    if (selectedRowRef.current) {
-      selectedRowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    }
+    if (!navScrollRef.current) return
+    navScrollRef.current = false
+    selectedRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [selectedIndex])
 
   useEffect(() => {
@@ -159,36 +162,43 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   }, [normalizedResults, expandedPaths])
 
   const [prevRows, setPrevRows] = useState(rows)
-  const [prevSelectedFilePath, setPrevSelectedFilePath] = useState(selectedFilePath)
+  // 상세화면(Diff) 복귀 직후 '1회만' 직전에 열었던 파일로 선택을 복원했는지 여부.
+  const [restored, setRestored] = useState(false)
 
-  if (rows !== prevRows || selectedFilePath !== prevSelectedFilePath) {
+  if (!restored && rows.length > 0) {
+    // 최초 1회: 직전에 열었던 파일이 있으면 그 위치로, 없으면 첫 행으로 선택을 맞춘다.
+    setRestored(true)
     setPrevRows(rows)
-    setPrevSelectedFilePath(selectedFilePath)
-    if (rows.length > 0) {
-      if (selectedFilePath) {
-        const index = rows.findIndex(row => row.path === selectedFilePath)
-        if (index !== -1 && index !== selectedIndex) {
-          setSelectedIndex(index)
-        }
-      } else if (selectedIndex === -1) {
-        setSelectedIndex(0)
-      }
+    if (selectedFilePath) {
+      const index = rows.findIndex(row => row.path === selectedFilePath)
+      setSelectedIndex(index !== -1 ? index : 0)
+    } else if (selectedIndex === -1) {
+      setSelectedIndex(0)
+    }
+  } else if (rows !== prevRows) {
+    // 이후 rows 변경(폴더 펼침/접힘, 새로고침): 이전에 선택돼 있던 '경로'를 추적해 하이라이트만 유지한다.
+    // 스크롤/포커스는 하지 않으므로 폴더를 열 때 특정 파일로 점프하지 않는다.
+    const prevPath = prevRows[selectedIndex]?.path
+    setPrevRows(rows)
+    if (prevPath) {
+      const nextIndex = rows.findIndex(row => row.path === prevPath)
+      if (nextIndex !== selectedIndex) setSelectedIndex(nextIndex)
     }
   }
 
+  // 상세화면 복귀 직후 '1회만' 직전에 열었던 파일을 화면 중앙으로 스크롤하고 트리에 포커스를 준다.
+  // (이후 폴더 펼침/접힘에서는 동작하지 않는다.)
+  const didRestoreScrollRef = useRef(false)
   useEffect(() => {
-    if (rows.length > 0 && selectedFilePath) {
-      const index = rows.findIndex(row => row.path === selectedFilePath)
-      if (index !== -1) {
-        setTimeout(() => {
-          if (selectedRowRef.current) {
-            selectedRowRef.current.scrollIntoView({ block: 'center', behavior: 'auto' })
-          }
-          if (treeRef.current) treeRef.current.focus()
-        }, 50)
-      }
+    if (didRestoreScrollRef.current || !restored || rows.length === 0) return
+    didRestoreScrollRef.current = true
+    if (selectedFilePath && rows.some(row => row.path === selectedFilePath)) {
+      setTimeout(() => {
+        selectedRowRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' })
+        treeRef.current?.focus()
+      }, 50)
     }
-  }, [rows, selectedFilePath])
+  }, [restored, rows, selectedFilePath])
 
   const toggleExpand = (path: string) => {
     const next = new Set(expandedPaths)
@@ -338,6 +348,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (selectedIndex === -1 && rows.length > 0) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        navScrollRef.current = true
         setSelectedIndex(0)
         return
       }
@@ -348,9 +359,11 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()
+      navScrollRef.current = true
       setSelectedIndex(prev => Math.min(prev + 1, rows.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
+      navScrollRef.current = true
       setSelectedIndex(prev => Math.max(prev - 1, 0))
     } else if (e.key === 'ArrowRight') {
       if (!row.isFile && !row.isExpanded) {
