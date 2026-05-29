@@ -1,0 +1,33 @@
+#!/bin/sh
+# main 브랜치를 push 할 때, package.json 버전과 일치하는 태그(vX.Y.Z)가
+# push 대상 커밋에 달려 있는지 확인하여 "버전 bump 없는 push"를 막는다.
+# 우회하려면: git push --no-verify
+#
+# core.hooksPath=scripts/hooks 로 연결된다 (package.json 의 prepare 스크립트 참고).
+
+z40=0000000000000000000000000000000000000000
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$remote_ref" = "refs/heads/main" ] || continue
+  [ "$local_sha" = "$z40" ] && continue # 브랜치 삭제는 통과
+
+  ver=$(node -p "require('./package.json').version" 2>/dev/null)
+  [ -z "$ver" ] && continue
+  tag="v$ver"
+
+  if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null 2>&1; then
+    echo "[pre-push] 태그 $tag 가 없습니다. 먼저 'npm run release <level>' 로 릴리즈를 만드세요." >&2
+    echo "           (우회: git push --no-verify)" >&2
+    exit 1
+  fi
+
+  tag_sha=$(git rev-parse "$tag^{commit}")
+  if [ "$tag_sha" != "$local_sha" ]; then
+    echo "[pre-push] 버전이 올라가지 않았습니다 (push 대상이 $tag 이후로 진행됨)." >&2
+    echo "           push 전에 'npm run release <major|minor|patch>' 로 버전을 올리세요." >&2
+    echo "           (우회: git push --no-verify)" >&2
+    exit 1
+  fi
+done
+
+exit 0
