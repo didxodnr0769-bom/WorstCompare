@@ -21,6 +21,7 @@ interface DualTreeViewProps {
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onAction?: (action: Action) => void
+  onBusyChange?: (message: string | null) => void
 }
 
 interface TreeRow {
@@ -45,12 +46,15 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   expandedPaths,
   setExpandedPaths,
   onAction,
+  onBusyChange,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const scrollRefLeft = useRef<HTMLDivElement>(null)
   const scrollRefRight = useRef<HTMLDivElement>(null)
   const treeRef = useRef<HTMLDivElement>(null)
   const selectedRowRef = useRef<HTMLDivElement>(null)
+  // 복사/삭제가 진행되는 동안 중복 실행(더블클릭, 단축키)을 막는 동기 가드
+  const busyRef = useRef(false)
 
   useEffect(() => {
     if (selectedRowRef.current) {
@@ -208,101 +212,127 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     direction: 'to-right' | 'to-left'
   ) => {
     e?.stopPropagation()
-    const src = direction === 'to-right' ? `${leftDir}/${row.path}` : `${rightDir}/${row.path}`
-    const dest = direction === 'to-right' ? `${rightDir}/${row.path}` : `${leftDir}/${row.path}`
+    if (busyRef.current) return
+    busyRef.current = true
+    // 버튼 클릭 즉시 "복사 중…" 오버레이를 띄워 사용자 입력을 막고 진행 상황을 알림
+    onBusyChange?.('복사 중…')
 
-    let action: Action
+    try {
+      // 무거운 읽기/복사 작업 전에 오버레이가 먼저 화면에 그려지도록 한 프레임 양보
+      await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
 
-    if (row.isFile) {
-      const previousContent = await window.api.readFile(dest)
-      action = {
-        type: 'copy',
-        side: direction === 'to-right' ? 'right' : 'left',
-        path: row.path,
-        previousStatus: row.status,
-        previousContent: previousContent,
+      const src = direction === 'to-right' ? `${leftDir}/${row.path}` : `${rightDir}/${row.path}`
+      const dest = direction === 'to-right' ? `${rightDir}/${row.path}` : `${leftDir}/${row.path}`
+
+      let action: Action
+
+      if (row.isFile) {
+        const previousContent = await window.api.readFile(dest)
+        action = {
+          type: 'copy',
+          side: direction === 'to-right' ? 'right' : 'left',
+          path: row.path,
+          previousStatus: row.status,
+          previousContent: previousContent,
+        }
+      } else {
+        // 폴더인 경우: 하위 파일들의 상태를 모두 기록
+        const children = normalizedResults.filter(
+          r => r.normalizedPath.startsWith(row.path + '/') && r.status !== 'same'
+        )
+        const subActions: Action[] = await Promise.all(
+          children.map(async c => {
+            const cDest =
+              direction === 'to-right' ? `${rightDir}/${c.path}` : `${leftDir}/${c.path}`
+            const prevContent = await window.api.readFile(cDest)
+            return {
+              type: 'copy',
+              side: direction === 'to-right' ? 'right' : 'left',
+              path: c.path,
+              previousStatus: c.status,
+              previousContent: prevContent,
+            }
+          })
+        )
+        action = {
+          type: 'batch',
+          side: direction === 'to-right' ? 'right' : 'left',
+          path: row.path,
+          subActions: subActions,
+        }
       }
-    } else {
-      // 폴더인 경우: 하위 파일들의 상태를 모두 기록
-      const children = normalizedResults.filter(
-        r => r.normalizedPath.startsWith(row.path + '/') && r.status !== 'same'
-      )
-      const subActions: Action[] = await Promise.all(
-        children.map(async c => {
-          const cDest = direction === 'to-right' ? `${rightDir}/${c.path}` : `${leftDir}/${c.path}`
-          const prevContent = await window.api.readFile(cDest)
-          return {
-            type: 'copy',
-            side: direction === 'to-right' ? 'right' : 'left',
-            path: c.path,
-            previousStatus: c.status,
-            previousContent: prevContent,
-          }
-        })
-      )
-      action = {
-        type: 'batch',
-        side: direction === 'to-right' ? 'right' : 'left',
-        path: row.path,
-        subActions: subActions,
-      }
+
+      const success = await window.api.copyItem(src, dest)
+      if (success) {
+        if (onAction) onAction(action)
+        // 재비교(onRefresh)는 view='comparing' 오버레이로 이어지므로 깜빡임 없이 전환됨
+        onRefresh()
+      } else alert('복사 실패!')
+    } finally {
+      busyRef.current = false
+      onBusyChange?.(null)
     }
-
-    const success = await window.api.copyItem(src, dest)
-    if (success) {
-      if (onAction) onAction(action)
-      onRefresh()
-    } else alert('Copy failed!')
   }
 
   const handleDelete = async (e: React.MouseEvent | null, row: TreeRow, side: 'left' | 'right') => {
     e?.stopPropagation()
-    const confirmMsg = `Are you sure you want to delete ${row.name} from the ${side} side?`
+    const confirmMsg = `${row.name}을(를) ${side === 'left' ? '왼쪽' : '오른쪽'}에서 삭제하시겠습니까?`
+    // 오버레이는 confirm 이후에만 띄운다 (취소 시 오버레이가 남지 않도록)
     if (!confirm(confirmMsg)) return
+    if (busyRef.current) return
+    busyRef.current = true
+    onBusyChange?.('삭제 중…')
 
-    const targetBase = side === 'left' ? leftDir : rightDir
-    const target = `${targetBase}/${row.path}`
+    try {
+      await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
 
-    let action: Action
+      const targetBase = side === 'left' ? leftDir : rightDir
+      const target = `${targetBase}/${row.path}`
 
-    if (row.isFile) {
-      const previousContent = await window.api.readFile(target)
-      action = {
-        type: 'delete',
-        side: side,
-        path: row.path,
-        previousStatus: row.status,
-        previousContent: previousContent,
+      let action: Action
+
+      if (row.isFile) {
+        const previousContent = await window.api.readFile(target)
+        action = {
+          type: 'delete',
+          side: side,
+          path: row.path,
+          previousStatus: row.status,
+          previousContent: previousContent,
+        }
+      } else {
+        // 폴더 삭제인 경우
+        const children = normalizedResults.filter(r => r.normalizedPath.startsWith(row.path + '/'))
+        const subActions: Action[] = await Promise.all(
+          children.map(async c => {
+            const cTarget = side === 'left' ? `${leftDir}/${c.path}` : `${rightDir}/${c.path}`
+            const prevContent = await window.api.readFile(cTarget)
+            return {
+              type: 'delete',
+              side: side,
+              path: c.path,
+              previousStatus: c.status,
+              previousContent: prevContent,
+            }
+          })
+        )
+        action = {
+          type: 'batch',
+          side: side,
+          path: row.path,
+          subActions: subActions,
+        }
       }
-    } else {
-      // 폴더 삭제인 경우
-      const children = normalizedResults.filter(r => r.normalizedPath.startsWith(row.path + '/'))
-      const subActions: Action[] = await Promise.all(
-        children.map(async c => {
-          const cTarget = side === 'left' ? `${leftDir}/${c.path}` : `${rightDir}/${c.path}`
-          const prevContent = await window.api.readFile(cTarget)
-          return {
-            type: 'delete',
-            side: side,
-            path: c.path,
-            previousStatus: c.status,
-            previousContent: prevContent,
-          }
-        })
-      )
-      action = {
-        type: 'batch',
-        side: side,
-        path: row.path,
-        subActions: subActions,
-      }
+
+      const success = await window.api.deleteItem(target)
+      if (success) {
+        if (onAction) onAction(action)
+        onRefresh()
+      } else alert('삭제 실패!')
+    } finally {
+      busyRef.current = false
+      onBusyChange?.(null)
     }
-
-    const success = await window.api.deleteItem(target)
-    if (success) {
-      if (onAction) onAction(action)
-      onRefresh()
-    } else alert('Delete failed!')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

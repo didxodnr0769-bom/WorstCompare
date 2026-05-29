@@ -32,6 +32,9 @@ const App: React.FC = () => {
     return saved || 'dark'
   })
 
+  // 복사/삭제/되돌리기 등 디스크 작업 중 즉시 표시되는 오버레이 문구 (null이면 숨김)
+  const [busyMessage, setBusyMessage] = useState<string | null>(null)
+
   const [undoStack, setUndoStack] = useState<Action[]>([])
   const [redoStack, setRedoStack] = useState<Action[]>([])
 
@@ -136,32 +139,41 @@ const App: React.FC = () => {
   )
 
   const handleUndo = useCallback(async () => {
-    if (undoStack.length === 0) return
+    if (undoStack.length === 0 || busyMessage) return
 
     const action = undoStack[undoStack.length - 1]
+    setBusyMessage('되돌리는 중…')
     try {
+      // 상태를 먼저 그려서 사용자가 작업 시작을 즉시 인지하도록 한 프레임 양보
+      await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
       await executeAction(action, true)
       setUndoStack(prev => prev.slice(0, -1))
       setRedoStack(prev => [...prev, action])
       handleCompare(leftDir, rightDir)
     } catch (err) {
       console.error('Undo failed:', err)
+    } finally {
+      setBusyMessage(null)
     }
-  }, [undoStack, leftDir, rightDir, handleCompare, executeAction])
+  }, [undoStack, leftDir, rightDir, handleCompare, executeAction, busyMessage])
 
   const handleRedo = useCallback(async () => {
-    if (redoStack.length === 0) return
+    if (redoStack.length === 0 || busyMessage) return
 
     const action = redoStack[redoStack.length - 1]
+    setBusyMessage('다시 실행 중…')
     try {
+      await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
       await executeAction(action, false)
       setRedoStack(prev => prev.slice(0, -1))
       setUndoStack(prev => [...prev, action])
       handleCompare(leftDir, rightDir)
     } catch (err) {
       console.error('Redo failed:', err)
+    } finally {
+      setBusyMessage(null)
     }
-  }, [redoStack, leftDir, rightDir, handleCompare, executeAction])
+  }, [redoStack, leftDir, rightDir, handleCompare, executeAction, busyMessage])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -233,9 +245,12 @@ const App: React.FC = () => {
                 expandedPaths={expandedPaths}
                 setExpandedPaths={setExpandedPaths}
                 onAction={recordAction}
+                onBusyChange={setBusyMessage}
               />
             )}
-            {view === 'comparing' && <div className="loading-overlay">Comparing...</div>}
+            {(busyMessage || view === 'comparing') && (
+              <div className="loading-overlay">{busyMessage || '비교 중…'}</div>
+            )}
           </div>
         ) : (
           <DiffView
