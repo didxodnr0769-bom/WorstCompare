@@ -97,7 +97,7 @@ ipcMain.handle(
           } else {
             results.push({ path: file, status: 'modified' })
           }
-        } catch (_err) {
+        } catch {
           results.push({ path: file, status: 'error' })
         }
       } else if (leftExists) {

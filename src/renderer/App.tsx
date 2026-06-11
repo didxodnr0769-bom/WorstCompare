@@ -21,7 +21,10 @@ const App: React.FC = () => {
   const [results, setResults] = useState<ComparisonResult[]>([])
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [view, setView] = useState<AppState>('setup')
-  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    const savedHistory = localStorage.getItem('compare-history')
+    return savedHistory ? JSON.parse(savedHistory) : []
+  })
   const [excludes, setExcludes] = useState<string>(() => {
     const saved = localStorage.getItem('app-excludes')
     return saved !== null ? saved : 'node_modules, .git, dist, build, .DS_Store'
@@ -37,13 +40,6 @@ const App: React.FC = () => {
 
   const [undoStack, setUndoStack] = useState<Action[]>([])
   const [redoStack, setRedoStack] = useState<Action[]>([])
-
-  useEffect(() => {
-    const savedHistory = localStorage.getItem('compare-history')
-    if (savedHistory) {
-      setHistory(JSON.parse(savedHistory))
-    }
-  }, [])
 
   useEffect(() => {
     document.documentElement.className = `${theme}-theme`
@@ -99,7 +95,7 @@ const App: React.FC = () => {
   )
 
   const executeAction = useCallback(
-    async (action: Action, isUndo: boolean) => {
+    async function executeAction(action: Action, isUndo: boolean) {
       const targetDir = action.side === 'left' ? leftDir : rightDir
       const sourceDir = action.side === 'left' ? rightDir : leftDir
       const targetPath = `${targetDir}/${action.path}`
@@ -225,7 +221,11 @@ const App: React.FC = () => {
               excludes={excludes}
               setExcludes={setExcludes}
               onCompare={() => handleCompare(leftDir, rightDir)}
-              onRefresh={() => handleCompare(leftDir, rightDir)}
+              onRefresh={() => {
+                // 새로고침 시 모든 폴더를 접은 상태로 초기화한다.
+                setExpandedPaths(new Set(['']))
+                handleCompare(leftDir, rightDir)
+              }}
               hasResults={results.length > 0}
               history={history}
               onSelectHistory={h => handleCompare(h.left, h.right)}

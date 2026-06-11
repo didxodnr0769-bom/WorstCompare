@@ -447,17 +447,22 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
         </div>
         <span className="row-name">
           {exists ? row.name : ''}
-          {!row.isFile && row.folderStatus !== 'same' && (!row.isExpanded || !exists) && (
-            <span className={`folder-status-hint ${row.folderStatus}`}>
-              (
-              {row.folderStatus === 'modified'
-                ? 'diff'
-                : row.folderStatus === 'left-only'
-                  ? 'only left'
-                  : 'only right'}
-              )
-            </span>
-          )}
+          {/* 폴더가 존재하는 쪽에서, 접혀 있을 때 상태를 폴더명 옆에 표시 (좌/우 동일하게 동작) */}
+          {!row.isFile &&
+            exists &&
+            !row.isExpanded &&
+            row.folderStatus &&
+            row.folderStatus !== 'same' && (
+              <span className={`folder-status-hint ${row.folderStatus}`}>
+                (
+                {row.folderStatus === 'modified'
+                  ? '변경됨'
+                  : row.folderStatus === 'left-only'
+                    ? '왼쪽만'
+                    : '오른쪽만'}
+                )
+              </span>
+            )}
         </span>
 
         <div className="row-actions">
@@ -465,7 +470,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
             <button
               className="row-btn copy"
               onClick={e => handleCopy(e, row, 'to-right')}
-              title="Copy to Right"
+              title="오른쪽으로 복사"
             >
               <ArrowRight size={12} />
             </button>
@@ -474,7 +479,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
             <button
               className="row-btn copy"
               onClick={e => handleCopy(e, row, 'to-left')}
-              title="Copy to Left"
+              title="왼쪽으로 복사"
             >
               <ArrowRight size={12} style={{ transform: 'rotate(180deg)' }} />
             </button>
@@ -483,7 +488,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
             <button
               className="row-btn delete"
               onClick={e => handleDelete(e, row, side)}
-              title="Delete"
+              title="삭제"
             >
               <Trash2 size={12} />
             </button>
@@ -511,10 +516,10 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
     >
       <div className="tree-pane-header">
         <div className="header-side" title={leftDir}>
-          {leftFolderName} (Left)
+          {leftFolderName} (왼쪽)
         </div>
         <div className="header-side" title={rightDir}>
-          {rightFolderName} (Right)
+          {rightFolderName} (오른쪽)
         </div>
       </div>
 

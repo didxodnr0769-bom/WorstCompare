@@ -56,20 +56,20 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
     <div className="folder-selector-container">
       <div className="folder-inputs">
         <div className="folder-input-group">
-          <label>Left Folder</label>
+          <label>왼쪽 폴더</label>
           <div className="input-with-button">
-            <input type="text" value={leftDir} readOnly placeholder="Select folder..." />
-            <button onClick={() => handleSelect('left')} title="Select Folder">
+            <input type="text" value={leftDir} readOnly placeholder="폴더 선택..." />
+            <button onClick={() => handleSelect('left')} title="폴더 선택">
               <FolderOpen size={18} />
             </button>
           </div>
         </div>
 
         <div className="folder-input-group">
-          <label>Right Folder</label>
+          <label>오른쪽 폴더</label>
           <div className="input-with-button">
-            <input type="text" value={rightDir} readOnly placeholder="Select folder..." />
-            <button onClick={() => handleSelect('right')} title="Select Folder">
+            <input type="text" value={rightDir} readOnly placeholder="폴더 선택..." />
+            <button onClick={() => handleSelect('right')} title="폴더 선택">
               <FolderOpen size={18} />
             </button>
           </div>
@@ -77,7 +77,21 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
       </div>
 
       <div className="folder-input-group">
-        <label>Exclude Patterns (comma separated)</label>
+        <label className="label-with-help">
+          제외 패턴
+          <span className="help-tip" tabIndex={0}>
+            <span className="help-mark">?</span>
+            <span className="help-tip-content">
+              비교에서 제외할 폴더·파일 패턴입니다.
+              <br />
+              쉼표(,)로 구분해 여러 개를 입력할 수 있습니다.
+              <br />
+              경로에 입력한 문자열이 포함되면 비교 대상에서 제외됩니다.
+              <br />
+              예: node_modules, .git, dist, build, .DS_Store
+            </span>
+          </span>
+        </label>
         <input
           type="text"
           value={excludes}
@@ -89,23 +103,37 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
 
       <div className="action-buttons">
         <button className="compare-button" onClick={onCompare} disabled={!leftDir || !rightDir}>
-          <Play size={18} /> Compare
+          <Play size={18} /> 비교
         </button>
-        <button className="undo-button" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+        <button
+          className="undo-button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="실행 취소 (Ctrl+Z)"
+        >
           <Undo2 size={18} />
         </button>
-        <button className="redo-button" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)">
+        <button
+          className="redo-button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="다시 실행 (Ctrl+Y)"
+        >
           <Redo2 size={18} />
         </button>
         {hasResults && (
-          <button className="refresh-button" onClick={onRefresh} title="Refresh Comparison">
-            <RotateCw size={18} /> Refresh
+          <button
+            className="refresh-button"
+            onClick={onRefresh}
+            title="비교 새로고침 (모든 폴더 접힘)"
+          >
+            <RotateCw size={18} /> 새로고침
           </button>
         )}
         <button
           className={`history-toggle ${showHistory ? 'active' : ''}`}
           onClick={() => setShowHistory(!showHistory)}
-          title="Comparison History"
+          title="비교 기록"
         >
           <History size={18} />
         </button>
@@ -113,7 +141,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
 
       {showHistory && (
         <div className="history-dropdown">
-          {history.length === 0 && <div className="no-history">No history yet.</div>}
+          {history.length === 0 && <div className="no-history">기록이 없습니다.</div>}
           {history.map((h, i) => (
             <div
               key={i}
@@ -123,8 +151,8 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
                 setShowHistory(false)
               }}
             >
-              <div className="h-path">L: {h.left}</div>
-              <div className="h-path">R: {h.right}</div>
+              <div className="h-path">왼쪽: {h.left}</div>
+              <div className="h-path">오른쪽: {h.right}</div>
             </div>
           ))}
         </div>
@@ -156,6 +184,28 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           font-size: 0.8rem;
           color: var(--label-color);
           text-transform: uppercase;
+        }
+        .label-with-help { display: inline-flex; align-items: center; gap: 5px; }
+        .help-tip { position: relative; display: inline-flex; align-items: center; cursor: help; outline: none; }
+        .help-mark {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 14px; height: 14px; border-radius: 50%;
+          border: 1px solid var(--label-color); color: var(--label-color);
+          font-size: 0.62rem; font-weight: 700; line-height: 1; text-transform: none;
+        }
+        .help-tip:hover .help-mark, .help-tip:focus .help-mark { border-color: #646cff; color: #646cff; }
+        .help-tip-content {
+          position: absolute; left: 0; top: calc(100% + 8px); z-index: 200;
+          width: 320px; max-width: 70vw; padding: 10px 12px;
+          background: var(--header-bg); color: var(--text-color);
+          border: 1px solid var(--border-color); border-radius: 6px;
+          font-size: 0.72rem; font-weight: 400; line-height: 1.6;
+          text-transform: none; white-space: normal; letter-spacing: normal;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+          opacity: 0; visibility: hidden; transition: opacity 0.15s ease; pointer-events: none;
+        }
+        .help-tip:hover .help-tip-content, .help-tip:focus .help-tip-content {
+          opacity: 1; visibility: visible;
         }
         .input-with-button {
           display: flex;

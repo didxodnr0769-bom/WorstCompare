@@ -474,7 +474,7 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
       <div className="side-by-side-diff">
         <div className="pane left">
           <div className="pane-header" title={leftDir}>
-            {leftFolderName} (LEFT)
+            {leftFolderName} (왼쪽)
           </div>
           <div className="pane-body">
             <div className="pane-scroll" ref={scrollRefLeft} onScroll={e => syncScroll(e, 'left')}>
@@ -489,7 +489,7 @@ const DiffView: React.FC<DiffViewProps> = ({ file, leftDir, rightDir, onBack, on
         </div>
         <div className="pane right">
           <div className="pane-header" title={rightDir}>
-            {rightFolderName} (RIGHT)
+            {rightFolderName} (오른쪽)
           </div>
           <div className="pane-body">
             <div
