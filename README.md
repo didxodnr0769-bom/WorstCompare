@@ -48,7 +48,7 @@ npm run build
 
 ---
 
-## 📦 패키징 및 실행 (Packaging & Distribution)
+## 📦 패키징, 설치, 삭제 (Packaging & Distribution)
 
 본 프로젝트는 [`electron-builder`](https://www.electron.build/)를 사용해 macOS용 패키지를 생성합니다.
 
@@ -56,28 +56,77 @@ npm run build
 
 | 스크립트           | 설명                                                   | 결과물                                     |
 | ------------------ | ------------------------------------------------------ | ------------------------------------------ |
+| `npm run dev`      | 개발 서버 실행. 코드 변경을 바로 확인할 때 사용        | 로컬 개발 서버                             |
+| `npm run build`    | TypeScript 타입 체크 후 앱 번들 생성                   | `dist/`, `dist-electron/`                  |
+| `npm run preview`  | 빌드된 Vite 결과물 미리보기                            | 로컬 미리보기 서버                         |
+| `npm test`         | Vitest 테스트 1회 실행                                 | 테스트 결과                                |
+| `npm run lint`     | `src` 폴더 ESLint 검사                                 | 린트 결과                                  |
+| `npm run format`   | Prettier로 소스/문서/설정 파일 포맷 정리               | 파일 직접 수정                             |
 | `npm run pack`     | 압축/서명 없이 `.app` 번들만 빠르게 생성 (개발 검증용) | `release/mac-arm64/WorstCompare.app`       |
 | `npm run dist:mac` | 배포용 DMG 인스톨러 생성                               | `release/WorstCompare-<version>-arm64.dmg` |
+| `npm run release`  | 버전 bump, CHANGELOG 갱신, 릴리즈 커밋/태그 생성       | 새 버전 커밋과 Git 태그                    |
+| `npm run prepare`  | Git hooks 경로를 `scripts/hooks`로 설정                | pre-push 훅 활성화                         |
 
 > 최초 실행 시 Electron 런타임 바이너리(~116MB)를 다운로드하므로 2~3분 소요됩니다. 이후 실행은 캐시를 사용해 훨씬 빠릅니다.
 
-### 1) DMG 인스톨러로 배포하기
+### 1) 개발자가 DMG 인스톨러 만들기
 
 ```bash
 npm run dist:mac
-open release/WorstCompare-1.0.0-arm64.dmg
 ```
 
-마운트된 DMG에서 `WorstCompare.app`을 `Applications` 폴더로 드래그한 뒤 Launchpad나 Spotlight에서 실행합니다.
+생성된 파일은 `release/` 폴더에 저장됩니다.
 
-### 2) 빌드된 .app 바로 실행 (검증용)
+```bash
+release/WorstCompare-<version>-arm64.dmg
+```
+
+다른 사용자에게는 이 `.dmg` 파일을 전달하는 방식을 권장합니다.
+
+### 2) 개발자가 .app 번들 바로 실행하기 (검증용)
 
 ```bash
 npm run pack
 open release/mac-arm64/WorstCompare.app
 ```
 
-### 3) 개발 모드 (패키징 없이 코드 변경을 즉시 반영)
+`npm run pack`은 설치 파일 없이 앱 번들만 만듭니다. 배포 전 빠른 실행 검증에 적합합니다.
+
+### 3) 사용자가 DMG로 설치하고 실행하기
+
+1. 전달받은 `WorstCompare-<version>-arm64.dmg` 파일을 더블클릭합니다.
+2. 열린 DMG 창에서 `WorstCompare.app`을 `Applications` 폴더로 드래그합니다.
+3. Launchpad, Spotlight, 또는 Finder의 `응용 프로그램` 폴더에서 `WorstCompare`를 실행합니다.
+
+코드 서명(Code Signing)을 하지 않은 빌드에서는 macOS 보안 경고가 나올 수 있습니다. 이 경우 Finder에서 `WorstCompare.app`을 **우클릭 → 열기 → 열기**로 한 번 허용하면 됩니다.
+
+### 4) 사용자가 .app 번들을 직접 실행하기
+
+DMG를 만들지 않고 `release/mac-arm64/WorstCompare.app`을 전달받은 경우에는 앱을 더블클릭해 실행할 수 있습니다.
+
+다만 `.app`만 압축 없이 공유하면 macOS 권한/격리 속성이 꼬일 수 있으므로, 일반 배포에는 `.dmg`를 권장합니다.
+
+### 5) 앱 삭제하기
+
+DMG로 설치한 앱은 `Applications` 폴더에 복사된 앱 번들을 삭제하면 제거됩니다.
+
+```bash
+rm -rf /Applications/WorstCompare.app
+```
+
+Finder에서는 `응용 프로그램` 폴더의 `WorstCompare.app`을 휴지통으로 이동하면 됩니다.
+
+앱 설정과 캐시까지 초기화하려면 아래 파일/폴더도 삭제할 수 있습니다.
+
+```bash
+rm -rf "$HOME/Library/Application Support/WorstCompare"
+rm -f "$HOME/Library/Preferences/com.taewook.worstcompare.plist"
+rm -rf "$HOME/Library/Saved Application State/com.taewook.worstcompare.savedState"
+```
+
+일반적인 앱 제거만 필요하면 `/Applications/WorstCompare.app` 삭제로 충분합니다.
+
+### 6) 개발 모드 (패키징 없이 코드 변경을 즉시 반영)
 
 ```bash
 npm run dev
