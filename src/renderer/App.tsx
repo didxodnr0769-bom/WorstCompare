@@ -1,9 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useReducer } from 'react'
 import { Sun, Moon } from 'lucide-react'
 import FolderSelector from './components/FolderSelector'
 import DualTreeView from './components/DualTreeView'
 import DiffView from './components/DiffView'
 import { ComparisonResult, Action } from './electron.d'
+import {
+  COMPARISON_PRESETS_STORAGE_KEY,
+  comparisonSettingsReducer,
+  loadComparisonSettings,
+  ComparisonAction,
+} from './comparisonPresets'
 import './App.css'
 
 export type AppState = 'setup' | 'comparing' | 'diff'
@@ -16,18 +22,23 @@ interface HistoryItem {
 }
 
 const App: React.FC = () => {
-  const [leftDir, setLeftDir] = useState<string>('')
-  const [rightDir, setRightDir] = useState<string>('')
+  const [comparisonSettings, dispatchSettingsChange] = useReducer(
+    comparisonSettingsReducer,
+    null,
+    () =>
+      loadComparisonSettings(
+        localStorage.getItem(COMPARISON_PRESETS_STORAGE_KEY),
+        localStorage.getItem('app-exclude-presets'),
+        localStorage.getItem('app-excludes')
+      )
+  )
+  const { leftDir, rightDir, excludes } = comparisonSettings
   const [results, setResults] = useState<ComparisonResult[]>([])
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [view, setView] = useState<AppState>('setup')
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     const savedHistory = localStorage.getItem('compare-history')
     return savedHistory ? JSON.parse(savedHistory) : []
-  })
-  const [excludes, setExcludes] = useState<string>(() => {
-    const saved = localStorage.getItem('app-excludes')
-    return saved !== null ? saved : 'node_modules, .git, dist, build, .DS_Store'
   })
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(['']))
   const [theme, setTheme] = useState<Theme>(() => {
@@ -47,8 +58,21 @@ const App: React.FC = () => {
   }, [theme])
 
   useEffect(() => {
-    localStorage.setItem('app-excludes', excludes)
-  }, [excludes])
+    localStorage.setItem('app-excludes', comparisonSettings.excludes)
+    localStorage.setItem(COMPARISON_PRESETS_STORAGE_KEY, JSON.stringify(comparisonSettings))
+  }, [comparisonSettings])
+
+  const handleSettingsChange = (action: ComparisonAction) => {
+    const next = comparisonSettingsReducer(comparisonSettings, action)
+    if (next.leftDir !== leftDir || next.rightDir !== rightDir) {
+      setResults([])
+      setSelectedFile(null)
+      setExpandedPaths(new Set(['']))
+      setUndoStack([])
+      setRedoStack([])
+    }
+    dispatchSettingsChange(action)
+  }
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
@@ -82,8 +106,9 @@ const App: React.FC = () => {
         if (l !== leftDir || r !== rightDir) {
           setUndoStack([])
           setRedoStack([])
-          setLeftDir(l)
-          setRightDir(r)
+          setSelectedFile(null)
+          setExpandedPaths(new Set(['']))
+          dispatchSettingsChange({ type: 'edit', values: { leftDir: l, rightDir: r } })
         }
       } catch (err) {
         console.error('Comparison failed:', err)
@@ -173,6 +198,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLElement &&
+        e.target.closest('input, textarea, select, [contenteditable="true"]')
+      ) {
+        return
+      }
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 'z') {
           e.preventDefault()
@@ -216,10 +247,10 @@ const App: React.FC = () => {
             <FolderSelector
               leftDir={leftDir}
               rightDir={rightDir}
-              setLeftDir={setLeftDir}
-              setRightDir={setRightDir}
-              excludes={excludes}
-              setExcludes={setExcludes}
+              setLeftDir={leftDir => handleSettingsChange({ type: 'edit', values: { leftDir } })}
+              setRightDir={rightDir => handleSettingsChange({ type: 'edit', values: { rightDir } })}
+              comparisonSettings={comparisonSettings}
+              onSettingsChange={handleSettingsChange}
               onCompare={() => handleCompare(leftDir, rightDir)}
               onRefresh={() => {
                 // 새로고침 시 모든 폴더를 접은 상태로 초기화한다.
@@ -233,6 +264,7 @@ const App: React.FC = () => {
               onRedo={handleRedo}
               canUndo={undoStack.length > 0}
               canRedo={redoStack.length > 0}
+              disabled={view === 'comparing' || !!busyMessage}
             />
             {results.length > 0 && (
               <DualTreeView

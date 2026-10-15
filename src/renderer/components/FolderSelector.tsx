@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { FolderOpen, Play, RotateCw, History, Undo2, Redo2 } from 'lucide-react'
+import ComparisonPresets from './ComparisonPresets'
+import { ComparisonAction, ComparisonSettings } from '../comparisonPresets'
 
 interface HistoryItem {
   left: string
@@ -12,8 +14,8 @@ interface FolderSelectorProps {
   rightDir: string
   setLeftDir: (path: string) => void
   setRightDir: (path: string) => void
-  excludes: string
-  setExcludes: (val: string) => void
+  comparisonSettings: ComparisonSettings
+  onSettingsChange: (action: ComparisonAction) => void
   onCompare: () => void
   onRefresh: () => void
   hasResults: boolean
@@ -23,6 +25,7 @@ interface FolderSelectorProps {
   onRedo: () => void
   canUndo: boolean
   canRedo: boolean
+  disabled: boolean
 }
 
 const FolderSelector: React.FC<FolderSelectorProps> = ({
@@ -30,8 +33,8 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
   rightDir,
   setLeftDir,
   setRightDir,
-  excludes,
-  setExcludes,
+  comparisonSettings,
+  onSettingsChange,
   onCompare,
   onRefresh,
   hasResults,
@@ -41,6 +44,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
   onRedo,
   canUndo,
   canRedo,
+  disabled,
 }) => {
   const [showHistory, setShowHistory] = useState(false)
 
@@ -53,7 +57,8 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
   }
 
   return (
-    <div className="folder-selector-container">
+    <fieldset className="folder-selector-container" disabled={disabled}>
+      <ComparisonPresets settings={comparisonSettings} onChange={onSettingsChange} />
       <div className="folder-inputs">
         <div className="folder-input-group">
           <label>왼쪽 폴더</label>
@@ -77,7 +82,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
       </div>
 
       <div className="folder-input-group">
-        <label className="label-with-help">
+        <label className="label-with-help" htmlFor="exclude-patterns">
           제외 패턴
           <span className="help-tip" tabIndex={0}>
             <span className="help-mark">?</span>
@@ -93,9 +98,12 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           </span>
         </label>
         <input
+          id="exclude-patterns"
           type="text"
-          value={excludes}
-          onChange={e => setExcludes(e.target.value)}
+          value={comparisonSettings.excludes}
+          onChange={event =>
+            onSettingsChange({ type: 'edit', values: { excludes: event.target.value } })
+          }
           placeholder="node_modules, .git, ..."
           className="exclude-input"
         />
@@ -167,7 +175,8 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           background: var(--card-bg);
           padding: 15px;
           border-radius: 8px;
-          margin-bottom: 15px;
+          margin: 0 0 15px;
+          min-width: 0;
           border: 1px solid var(--border-color);
         }
         .folder-inputs {
@@ -295,7 +304,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
         .h-path { font-size: 0.75rem; color: var(--label-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .no-history { padding: 20px; text-align: center; color: var(--label-color); font-size: 0.9rem; }
       `}</style>
-    </div>
+    </fieldset>
   )
 }
 
