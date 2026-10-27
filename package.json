@@ -1,6 +1,6 @@
 {
   "name": "01_worst_compare",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "",
   "main": "dist-electron/main.js",
   "engines": {
