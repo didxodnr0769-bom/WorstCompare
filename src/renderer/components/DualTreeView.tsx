@@ -74,7 +74,7 @@ const DualTreeView: React.FC<DualTreeViewProps> = ({
   const normalizedResults = useMemo(() => {
     return results.map(r => ({
       ...r,
-      normalizedPath: r.path.replace(/\\/g, '/'),
+      normalizedPath: r.path,
     }))
   }, [results])
 
