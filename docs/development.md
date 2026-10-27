@@ -6,18 +6,24 @@
 
 ## 준비 환경
 
-- Node.js: **22.13 이상인 22.x 또는 24.x** 권장
+- Node.js: **22.x (22.13.0 이상) 권장**
+- Node.js 24.x도 지원하며, **22.23.4와 24.22.1에서 테스트·빌드를 검증**했습니다.
 - npm
 - Git
 - 현재 패키징 대상: macOS 13 이상, Apple Silicon (`arm64`)
 
-Vite 8의 Node.js 요구 범위는 `^20.19.0 || >=22.12.0`이고, Electron 45 설치 패키지는 Node.js 22.12 이상을 요구합니다. Node 20·21로 전체 개발 환경을 설치하지 마세요. 위 권장 버전은 함께 설치되는 개발 도구의 요구사항도 고려한 것입니다.
+`package.json`의 Node.js 지원 범위는 `^22.13.0 || ^24.0.0`입니다. Electron 45 설치 패키지는 Node.js 22.12 이상을 요구하므로 Node 20·21은 지원하지 않습니다.
+
+저장소의 `.nvmrc`는 권장 계열인 `22`를 지정합니다. nvm을 사용한다면 아래 명령처럼 의존성 설치 전에 `nvm install`과 `nvm use`로 현재 터미널을 전환하세요. nvm을 사용하지 않는 경우에는 지원 범위에 맞는 Node.js를 설치한 뒤 진행합니다.
 
 ## 소스 실행
 
 ```bash
 git clone https://github.com/didxodnr0769-bom/WorstCompare.git
 cd WorstCompare
+nvm install
+nvm use
+node -v
 npm ci --include=dev --include=optional
 npm run dev
 ```
@@ -64,6 +70,8 @@ Electron 런타임이 캐시에 없으면 패키징 과정에서 다운로드합
 git status
 git switch main
 git pull --ff-only origin main
+nvm install
+nvm use
 npm ci --include=dev --include=optional
 ```
 
@@ -119,11 +127,12 @@ Intel Mac이나 Windows·Linux를 지원하려면 대상 아키텍처·플랫폼
 
 ### Node 버전 오류
 
-`node -v`로 현재 터미널의 Node 버전을 확인합니다. nvm을 사용한다면 해당 터미널에서 지원 버전으로 전환한 뒤 의존성을 재설치합니다.
+`node -v`로 현재 터미널의 Node 버전을 확인합니다. nvm을 사용한다면 저장소 폴더에서 아래 명령을 실행해 `.nvmrc`가 지정한 Node 22.x로 전환한 뒤 의존성을 재설치합니다.
 
 ```bash
-nvm install 22
-nvm use 22
+nvm install
+nvm use
+node -v
 npm ci --include=dev --include=optional
 ```
 
@@ -132,6 +141,8 @@ npm ci --include=dev --include=optional
 `Cannot find module '@rolldown/binding-...'`가 나오면 Node 버전과 CPU 아키텍처를 확인합니다.
 
 ```bash
+nvm install
+nvm use
 node -p 'process.version + " " + process.platform + " " + process.arch'
 npm ci --include=dev --include=optional
 ```
